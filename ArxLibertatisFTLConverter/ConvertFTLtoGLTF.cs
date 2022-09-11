@@ -136,10 +136,16 @@ namespace ArxLibertatisFTLConverter
 
             // Build up gltf primitives 
 
-            for (int i = 0; i < baseVerts.Length; i++)
+            for (int i = 0; i < baseVerts.Length - 3; i++)
             {
-  
-                prim.AddPoint(new VERTEX(baseVerts[i].X, baseVerts[i].Y, baseVerts[i].Z ));
+                VERTEX vert1 = new VERTEX(baseVerts[i].X, baseVerts[i].Y, baseVerts[i].Z);
+                VERTEX vert2 = new VERTEX(baseVerts[i + 1].X, baseVerts[i + 1].Y, baseVerts[i + 1].Z);
+                VERTEX vert3 = new VERTEX(baseVerts[i + 2].X, baseVerts[i + 2].Y, baseVerts[i + 2].Z);
+
+
+
+                prim.AddTriangle(vert1,vert2,vert3);
+                
             }
 
             var scene = new SharpGLTF.Scenes.SceneBuilder();
