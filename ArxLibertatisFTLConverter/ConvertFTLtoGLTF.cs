@@ -52,8 +52,6 @@ namespace ArxLibertatisFTLConverter
             FTL_IO ftl = new FTL_IO();
 
 
-
-
             using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             {
                 var s = FTL_IO.EnsureUnpacked(fs);
@@ -116,28 +114,63 @@ namespace ArxLibertatisFTLConverter
                 }
             }
 
-
+            /*
+     public struct EERIE_FACE_FTL
+    {
+        public int facetype;
+        public uint[] rgb;
+        public ushort[] vid;
+        public short texid;
+        public float[] u;
+        public float[] v;
+        public short[] ou;
+        public short[] ov;
+        public float transval;
+        public SavedVec3 norm;
+        public SavedVec3[] nrmls;
+        public float temp;
+    }
+            */
             for (int i = 0; i < ftl._3DDataSection.faceList.Length; ++i)
             {
                 var face = ftl._3DDataSection.faceList[i];
-                HashSet<string> groups = new HashSet<string>();
-                string materialName = "noMaterial";
-                if (face.texid >= 0)
-                {
-                    materialName = materials[face.texid].name;
-                    
-                }
-                Console.WriteLine(face);
+                var faceType = face.facetype;
+                var rgb = face.rgb;
+                var vid = face.vid;
+                var texid = face.texid;
+                var u = face.u;
+                var v = face.v;
+                var ou = face.ou;
+                var ov = face.ov;
+                var transval = face.transval;
+                var norm = face.norm;
+                var normals = face.nrmls;
+                var temp = face.temp;
+
+                //    Console.WriteLine("Dump face data:");
+                //    Console.WriteLine(face); //ArxLibertatisEditorIO.RawIO.FTL.EERIE_FACE_FTL
+                //    Console.WriteLine(faceType); // 1 || 3 ? No idea what the different types represent
+                //    Console.WriteLine(rgb); // array .. Seems to be always 0? Maybe used in engine for face coloration? no idea
+                //    Console.WriteLine(vid); // array ..Appears in groups of three.. BINGO!! appears to be vertex ordering data
+                //    Console.WriteLine(texid); // always 0? May be for multiple textures, unsure if multiple even exist
+                //    Console.WriteLine(u); // array ..Appears in groups of three.. floating point always under 0   
+                //    Console.WriteLine(v); // array .. As above, but not the same
+                //    Console.WriteLine(ou); //array .. Also looks like it is references vertex?
+                //    Console.WriteLine(ov); //array .. As above, but not the same
+                //    Console.WriteLine(transval); // transparency value, float, mostly always 0 ?
+                //    Console.WriteLine(norm); // appears to be normal value for face
+                //    Console.WriteLine(normals); //  massive array just full of zeroes, no idea what it is meant to do
+                //    Console.WriteLine(temp); // some random value
+
+
 
             }
 
             var material1 = new MaterialBuilder();
-           //     .WithDoubleSide(true)
-          //      .WithMetallicRoughnessShader();
-            //.WithChannelParam(KnownChannel.BaseColor, KnownProperty.RGBA, new Vector4(1, 0, 0, 1));
 
             var mesh = new MeshBuilder<VERTEX>("ArxMesh");
 
+            // "point cloud" primitive
             var prim = mesh.UsePrimitive(material1, 1);
 
 
@@ -150,15 +183,16 @@ namespace ArxLibertatisFTLConverter
                 vertsVec3[i].X = baseVerts[i].X;
                 vertsVec3[i].Y = baseVerts[i].Y;
                 vertsVec3[i].Z = baseVerts[i].Z;
-                //Console.WriteLine(baseVerts[i]);
             }
 
-            // this is getting cranky!
+     
             for (int i = 0; i < vertsVec3.Length; i+=1)
             {
                 prim.AddPoint(new VERTEX(vertsVec3[i]));
             }
-            
+
+
+
             var scene = new SharpGLTF.Scenes.SceneBuilder();
 
             scene.AddRigidMesh(mesh, Matrix4x4.Identity);
