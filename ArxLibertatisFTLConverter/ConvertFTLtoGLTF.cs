@@ -16,9 +16,8 @@ using System.Numerics;
 
 namespace ArxLibertatisFTLConverter
 {
-    using VERTEX = SharpGLTF.Geometry.VertexTypes.VertexPosition;
-    using VERTEXNORM = SharpGLTF.Geometry.VertexTypes.VertexPositionNormal;
-    using VERTEXTAN = SharpGLTF.Geometry.VertexTypes.VertexPositionNormalTangent;
+   using VERTEX = SharpGLTF.Geometry.VertexTypes.VertexPosition;
+
 
     class ConvertFTLtoGLTF
     {
@@ -114,23 +113,17 @@ namespace ArxLibertatisFTLConverter
                 }
             }
 
-            /*
-     public struct EERIE_FACE_FTL
-    {
-        public int facetype;
-        public uint[] rgb;
-        public ushort[] vid;
-        public short texid;
-        public float[] u;
-        public float[] v;
-        public short[] ou;
-        public short[] ov;
-        public float transval;
-        public SavedVec3 norm;
-        public SavedVec3[] nrmls;
-        public float temp;
-    }
-            */
+            Vector3[] vertsVec3 = new Vector3[baseVerts.Length];
+            for (int i = 0; i < baseVerts.Length; i++)
+            {
+                vertsVec3[i].X = baseVerts[i].X;
+                vertsVec3[i].Y = baseVerts[i].Y;
+                vertsVec3[i].Z = baseVerts[i].Z;
+            }
+
+            List<Vector3> triangles = new List<Vector3>();
+
+
             for (int i = 0; i < ftl._3DDataSection.faceList.Length; ++i)
             {
                 var face = ftl._3DDataSection.faceList[i];
@@ -164,31 +157,39 @@ namespace ArxLibertatisFTLConverter
 
 
 
+                for (int j = 0; j < vid.Length; j++)
+                {
+                    triangles.Add(vertsVec3[vid[j]]);
+                }
+
             }
 
-            var material1 = new MaterialBuilder();
+            Console.WriteLine(triangles.Count);
+            var material1 = new MaterialBuilder()
+                .WithDoubleSide(true)
+                .WithMetallicRoughnessShader();
 
+                
             var mesh = new MeshBuilder<VERTEX>("ArxMesh");
 
             // "point cloud" primitive
-            var prim = mesh.UsePrimitive(material1, 1);
+            var prim = mesh.UsePrimitive(material1,3);
 
 
             // Build up gltf primitives 
  
             // There is probably a very simple way of doing this, I just don't know how
-            Vector3[] vertsVec3 = new Vector3[baseVerts.Length];
-            for (int i = 0; i < baseVerts.Length ; i++)
-            {
-                vertsVec3[i].X = baseVerts[i].X;
-                vertsVec3[i].Y = baseVerts[i].Y;
-                vertsVec3[i].Z = baseVerts[i].Z;
-            }
+
 
      
-            for (int i = 0; i < vertsVec3.Length; i+=1)
+            for (int i = 0; i < triangles.Count; i+=3)
             {
-                prim.AddPoint(new VERTEX(vertsVec3[i]));
+                Console.WriteLine(triangles[i]);
+                VERTEX v1 = new VERTEX(triangles[i].X,triangles[i].Y,triangles[i].Z);
+                VERTEX v2 = new VERTEX(triangles[i].X, triangles[i].Y, triangles[i].Z);
+                VERTEX v3 = new VERTEX(triangles[i].X, triangles[i].Y, triangles[i].Z);
+
+                prim.AddTriangle(v1,v2,v3);
             }
 
 
