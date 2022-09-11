@@ -56,6 +56,7 @@ namespace ArxLibertatisFTLConverter
                 var s = FTL_IO.EnsureUnpacked(fs);
                 ftl.ReadFrom(s);
             }
+            
 
             Vector4[] baseVerts = new Vector4[ftl._3DDataSection.vertexList.Length];
             Vector3[] baseNorms = new Vector3[baseVerts.Length];
@@ -130,24 +131,28 @@ namespace ArxLibertatisFTLConverter
                 .WithMetallicRoughnessShader();
             //.WithChannelParam(KnownChannel.BaseColor, KnownProperty.RGBA, new Vector4(1, 0, 0, 1));
 
-            var mesh = new MeshBuilder<VERTEX>("mesh");
+            var mesh = new MeshBuilder<VERTEX>("ArxMesh");
 
             var prim = mesh.UsePrimitive(material1);
 
+
             // Build up gltf primitives 
-
-            for (int i = 0; i < baseVerts.Length - 3; i++)
+ 
+            // There is probably a very simple way of doing this, I just don't know how
+            Vector3[] vertsVec3 = new Vector3[baseVerts.Length];
+            for (int i = 0; i < baseVerts.Length ; i++)
             {
-                VERTEX vert1 = new VERTEX(baseVerts[i].X, baseVerts[i].Y, baseVerts[i].Z);
-                VERTEX vert2 = new VERTEX(baseVerts[i + 1].X, baseVerts[i + 1].Y, baseVerts[i + 1].Z);
-                VERTEX vert3 = new VERTEX(baseVerts[i + 2].X, baseVerts[i + 2].Y, baseVerts[i + 2].Z);
-
-
-
-                prim.AddTriangle(vert1,vert2,vert3);
-                
+                vertsVec3[i].X = baseVerts[i].X;
+                vertsVec3[i].Y = baseVerts[i].Y;
+                vertsVec3[i].Z = baseVerts[i].Z;
             }
 
+            // this is getting cranky!
+            for (int i = 0; i < vertsVec3.Length; i++)
+            {
+                prim.AddPoint(new VERTEX(vertsVec3[i]));
+            }
+            
             var scene = new SharpGLTF.Scenes.SceneBuilder();
 
             scene.AddRigidMesh(mesh, Matrix4x4.Identity);
