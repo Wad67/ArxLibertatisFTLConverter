@@ -17,6 +17,9 @@ using System.Numerics;
 namespace ArxLibertatisFTLConverter
 {
     using VERTEX = SharpGLTF.Geometry.VertexTypes.VertexPosition;
+    using VERTEXNORM = SharpGLTF.Geometry.VertexTypes.VertexPositionNormal;
+    using VERTEXTAN = SharpGLTF.Geometry.VertexTypes.VertexPositionNormalTangent;
+
     class ConvertFTLtoGLTF
     {
         private class Material
@@ -122,18 +125,20 @@ namespace ArxLibertatisFTLConverter
                 if (face.texid >= 0)
                 {
                     materialName = materials[face.texid].name;
+                    
                 }
+                Console.WriteLine(face);
 
             }
 
-            var material1 = new MaterialBuilder()
-                .WithDoubleSide(true)
-                .WithMetallicRoughnessShader();
+            var material1 = new MaterialBuilder();
+           //     .WithDoubleSide(true)
+          //      .WithMetallicRoughnessShader();
             //.WithChannelParam(KnownChannel.BaseColor, KnownProperty.RGBA, new Vector4(1, 0, 0, 1));
 
             var mesh = new MeshBuilder<VERTEX>("ArxMesh");
 
-            var prim = mesh.UsePrimitive(material1);
+            var prim = mesh.UsePrimitive(material1, 1);
 
 
             // Build up gltf primitives 
@@ -145,10 +150,11 @@ namespace ArxLibertatisFTLConverter
                 vertsVec3[i].X = baseVerts[i].X;
                 vertsVec3[i].Y = baseVerts[i].Y;
                 vertsVec3[i].Z = baseVerts[i].Z;
+                //Console.WriteLine(baseVerts[i]);
             }
 
             // this is getting cranky!
-            for (int i = 0; i < vertsVec3.Length; i++)
+            for (int i = 0; i < vertsVec3.Length; i+=1)
             {
                 prim.AddPoint(new VERTEX(vertsVec3[i]));
             }
