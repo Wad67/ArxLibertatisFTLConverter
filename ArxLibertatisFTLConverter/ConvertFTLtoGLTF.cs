@@ -3,7 +3,10 @@ using ArxLibertatisEditorIO.Util;
 //using CSWavefront.Raw;
 //Contains the autodictionary class?
 using CSWavefront.Util;
-using SharpGLTF;
+using SharpGLTF.Geometry;
+using SharpGLTF.Geometry.VertexTypes;
+using SharpGLTF.Materials;
+using SharpGLTF.Schema2;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,6 +16,7 @@ using System.Numerics;
 
 namespace ArxLibertatisFTLConverter
 {
+    using VERTEX = SharpGLTF.Geometry.VertexTypes.VertexPosition;
     class ConvertFTLtoGLTF
     {
         private class Material
@@ -20,6 +24,8 @@ namespace ArxLibertatisFTLConverter
             public string name;
             public string textureFile;
         }
+
+
 
         public static void Convert(string file)
         {
@@ -43,7 +49,7 @@ namespace ArxLibertatisFTLConverter
             FTL_IO ftl = new FTL_IO();
 
 
-           
+
 
             using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             {
@@ -106,11 +112,6 @@ namespace ArxLibertatisFTLConverter
                 }
             }
 
-            //TODO: this has all gotta be gltf objects now
-
-            //ObjFile obj = new ObjFile();
-            //obj.vertices.AddRange(baseVerts);
-            //obj.normals.AddRange(baseNorms);
 
             for (int i = 0; i < ftl._3DDataSection.faceList.Length; ++i)
             {
@@ -121,37 +122,33 @@ namespace ArxLibertatisFTLConverter
                 {
                     materialName = materials[face.texid].name;
                 }
-                
-                /*
-                ObjObject obje = obj.objects[materialName];
 
-                Polygon p = new Polygon
-                {
-                    hasNormals = true,
-                    hasUvs = true
-                };
-                for (int j = 0; j < 3; ++j)
-                {
-                    ushort baseVertIndex = face.vid[j];
-                    groups.UnionWith(indexToGroup[baseVertIndex]);
-
-                    PolygonVertex pv = new PolygonVertex
-                    {
-                        vertex = baseVertIndex,
-                        normal = baseVertIndex,
-                        uv = obj.uvs.Count
-                    };
-
-                    obj.uvs.Add(new Vector3(face.u[j], 1 - face.v[j], 1));
-                    p.vertices.Add(pv);
-                }
-
-                obje.groupNames.UnionWith(groups);
-                obje.polygons[materialName].Add(p);
-                */
             }
 
+            var material1 = new MaterialBuilder()
+                .WithDoubleSide(true)
+                .WithMetallicRoughnessShader();
+            //.WithChannelParam(KnownChannel.BaseColor, KnownProperty.RGBA, new Vector4(1, 0, 0, 1));
 
+            var mesh = new MeshBuilder<VERTEX>("mesh");
+
+            var prim = mesh.UsePrimitive(material1);
+
+            // Build up gltf primitives 
+
+            for (int i = 0; i < baseVerts.Length; i++)
+            {
+  
+                prim.AddPoint(new VERTEX(baseVerts[i].X, baseVerts[i].Y, baseVerts[i].Z ));
+            }
+
+            var scene = new SharpGLTF.Scenes.SceneBuilder();
+
+            scene.AddRigidMesh(mesh, Matrix4x4.Identity);
+
+            var model = scene.ToGltf2();
+
+            model.SaveGLTF(outputName);
         }
     }
 }
