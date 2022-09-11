@@ -1,8 +1,9 @@
 ﻿using ArxLibertatisEditorIO.RawIO.FTL;
 using ArxLibertatisEditorIO.Util;
-using CSWavefront.Raw;
+//using CSWavefront.Raw;
+//Contains the autodictionary class?
 using CSWavefront.Util;
-using SharpGLTF.IO;
+using SharpGLTF;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -40,6 +41,9 @@ namespace ArxLibertatisFTLConverter
             }
 
             FTL_IO ftl = new FTL_IO();
+
+
+           
 
             using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             {
@@ -102,9 +106,11 @@ namespace ArxLibertatisFTLConverter
                 }
             }
 
-            ObjFile obj = new ObjFile();
-            obj.vertices.AddRange(baseVerts);
-            obj.normals.AddRange(baseNorms);
+            //TODO: this has all gotta be gltf objects now
+
+            //ObjFile obj = new ObjFile();
+            //obj.vertices.AddRange(baseVerts);
+            //obj.normals.AddRange(baseNorms);
 
             for (int i = 0; i < ftl._3DDataSection.faceList.Length; ++i)
             {
@@ -115,6 +121,8 @@ namespace ArxLibertatisFTLConverter
                 {
                     materialName = materials[face.texid].name;
                 }
+                
+                /*
                 ObjObject obje = obj.objects[materialName];
 
                 Polygon p = new Polygon
@@ -140,24 +148,10 @@ namespace ArxLibertatisFTLConverter
 
                 obje.groupNames.UnionWith(groups);
                 obje.polygons[materialName].Add(p);
+                */
             }
 
-            //write out obj
-            ObjSaver.Save(obj, outputName);
 
-            MtlFile mtl = new MtlFile();
-            for (int i = 0; i < materials.Length; ++i)
-            {
-                var myMat = materials[i];
-                var mat = mtl.materials[myMat.name];
-                mat.ambientColor = Vector3.Zero;
-                mat.diffuseColor = Vector3.One;
-                mat.specularColor = Vector3.Zero;
-                mat.specularFactor = 0;
-                mat.transparency = 0;
-                mat.illuminationModel = IlluminationModel.HighlightOn;
-                mat.diffuseMap = Path.GetFileName(myMat.textureFile);
-            }
         }
     }
 }
