@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
+using SixLabors.ImageSharp;
 
 
 
@@ -163,36 +164,41 @@ namespace ArxLibertatisFTLConverter
                 }
 
             }
-
+            
             Console.WriteLine(triangles.Count);
+            var texturepath = materials[0].textureFile;
+                
+
+            //THIS POS doesn't accept BMP so we gotta convert it to PNG first
+            MemoryStream convertedImage = new MemoryStream();
+            using (SixLabors.ImageSharp.Image image = SixLabors.ImageSharp.Image.Load(texturepath))
+            {
+                image.SaveAsPng(texturepath);
+            }
+
+            
             var material1 = new MaterialBuilder()
+                .WithBaseColor(texturepath)
                 .WithDoubleSide(true)
                 .WithMetallicRoughnessShader();
 
                 
             var mesh = new MeshBuilder<VERTEX>("ArxMesh");
-
-            // "point cloud" primitive
             var prim = mesh.UsePrimitive(material1,3);
 
-
-            // Build up gltf primitives 
- 
-            // There is probably a very simple way of doing this, I just don't know how
-
-
+            // base mesh
      
             for (int i = 0; i < triangles.Count; i+=3)
             {
                 Console.WriteLine(triangles[i]);
                 VERTEX v1 = new VERTEX(triangles[i].X,triangles[i].Y,triangles[i].Z);
-                VERTEX v2 = new VERTEX(triangles[i].X, triangles[i].Y, triangles[i].Z);
-                VERTEX v3 = new VERTEX(triangles[i].X, triangles[i].Y, triangles[i].Z);
+                VERTEX v2 = new VERTEX(triangles[i + 1].X, triangles[i + 1].Y, triangles[i + 1].Z);
+                VERTEX v3 = new VERTEX(triangles[i + 2].X, triangles[i + 2].Y, triangles[i + 2].Z);
 
                 prim.AddTriangle(v1,v2,v3);
             }
 
-
+            Console.WriteLine(mesh);
 
             var scene = new SharpGLTF.Scenes.SceneBuilder();
 
