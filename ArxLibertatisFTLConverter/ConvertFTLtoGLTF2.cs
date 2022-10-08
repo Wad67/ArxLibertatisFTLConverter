@@ -16,7 +16,8 @@ namespace ArxLibertatisFTLConverter
             public string name;
             public List<Vector3> verts = new List<Vector3>();
             public List<Vector3> normals = new List<Vector3>();
-            public List<Vector2> UVs = new List<Vector2>();
+            public List<Vector3> U = new List<Vector3>();
+            public List<Vector3> V = new List<Vector3>();
         }
         public static void Convert(string file)
         {
@@ -109,13 +110,14 @@ namespace ArxLibertatisFTLConverter
                     orderedMeshData.verts.Add(new Vector3(vert.vert.x, vert.vert.y, vert.vert.z));
 
                     // add Uvs in order
-                    orderedMeshData.UVs.Add(new Vector2(face.u[0], face.v[0]));
-                    orderedMeshData.UVs.Add(new Vector2(face.u[1], face.v[1]));
-                    orderedMeshData.UVs.Add(new Vector2(face.u[2], face.v[2]));
+
 
                     orderedMeshData.normals.Add(new Vector3(vert.norm.x, vert.norm.y, vert.norm.z));
 
                 }
+
+                orderedMeshData.U.Add(new Vector3(face.u[0], face.u[1], face.u[2]));
+                orderedMeshData.V.Add(new Vector3(face.v[0], face.v[1], face.v[2]));
 
             }
 
@@ -130,7 +132,7 @@ namespace ArxLibertatisFTLConverter
                 Console.Write(orderedMeshData.normals.Count);
                 Console.WriteLine("");
                 Console.Write("UV coord Amount : ");
-                Console.Write(orderedMeshData.UVs.Count);
+                Console.Write(orderedMeshData.U.Count + orderedMeshData.V.Count);
                 Console.WriteLine("");
                 Console.WriteLine("###END###");
             }
@@ -150,10 +152,11 @@ namespace ArxLibertatisFTLConverter
                 VertexPositionNormal v1 = new VertexPositionNormal(orderedMeshData.verts[i], orderedMeshData.normals[i]);
                 VertexPositionNormal v2 = new VertexPositionNormal(orderedMeshData.verts[i + 1], orderedMeshData.normals[i + 1]);
                 VertexPositionNormal v3 = new VertexPositionNormal(orderedMeshData.verts[i + 2], orderedMeshData.normals[i + 2]);
-
-                VertexTexture1 vt1 = new VertexTexture1(orderedMeshData.UVs[i]);
-                VertexTexture1 vt2 = new VertexTexture1(orderedMeshData.UVs[i + 1]);
-                VertexTexture1 vt3 = new VertexTexture1(orderedMeshData.UVs[i + 2]);
+                //UV coords
+                // XYZ here is meaningless, just accessors 
+                VertexTexture1 vt1 = new VertexTexture1(new Vector2(orderedMeshData.U[i / 3].X, orderedMeshData.V[i / 3].X));
+                VertexTexture1 vt2 = new VertexTexture1(new Vector2(orderedMeshData.U[i / 3].Y, orderedMeshData.V[i / 3].Y));
+                VertexTexture1 vt3 = new VertexTexture1(new Vector2(orderedMeshData.U[i / 3].Z, orderedMeshData.V[i / 3].Z));
 
                 VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty> ver1 = new VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty>(v1, vt1);
                 VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty> ver2 = new VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty>(v2, vt2);
@@ -163,7 +166,12 @@ namespace ArxLibertatisFTLConverter
             }
 
             SharpGLTF.Scenes.SceneBuilder scene = new SharpGLTF.Scenes.SceneBuilder();
-            scene.AddRigidMesh(sceneMesh, Matrix4x4.Identity);
+            //https://www.energid.com/resources/orientation-calculator
+            //that site converts from sane numbers to whatever backward crackhead numerical system that quaternions use
+            //no, I don't care about gymbal lock, my brother in christ you have been played for an absolute fool
+            Quaternion fixRotation = new Quaternion(0,0,1,0);
+            SharpGLTF.Transforms.AffineTransform defaultTransform = new SharpGLTF.Transforms.AffineTransform(Vector3.One, fixRotation, Vector3.Zero);
+            scene.AddRigidMesh(sceneMesh, defaultTransform);
 
             SharpGLTF.Schema2.ModelRoot model = scene.ToGltf2();
 
