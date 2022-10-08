@@ -3,6 +3,7 @@ using System.IO;
 
 namespace ArxLibertatisFTLConverter
 {
+
     class Program
     {
         static void ConvertFile(string file)
@@ -23,6 +24,7 @@ namespace ArxLibertatisFTLConverter
 
         static void Main(string[] args)
         {
+
             foreach (string path in args)
             {
                 if (!File.Exists(path))

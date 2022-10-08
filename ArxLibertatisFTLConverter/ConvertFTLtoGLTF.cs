@@ -125,6 +125,10 @@ namespace ArxLibertatisFTLConverter
 
             List<Vector3> orderedVertex = new List<Vector3>();
             List<Vector3> orderedVertexNorms = new List<Vector3>();
+            List<Vector3> orderedU = new List<Vector3>();
+            List<Vector3> orderedV = new List<Vector3>();
+
+
 
             for (int i = 0; i < ftl._3DDataSection.faceList.Length; ++i)
             {
@@ -149,7 +153,15 @@ namespace ArxLibertatisFTLConverter
                     orderedVertex.Add(vertsVec3[vid[j]]);
 
                     orderedVertexNorms.Add(baseNorms[vid[j]]);
+
+                    
+
                 }
+
+                
+                // order from ov, ou
+                orderedU.Add(new Vector3(u[0], u[1], u[2]));
+                orderedV.Add(new Vector3(v[0], v[1], v[2]));
 
 
 
@@ -167,11 +179,11 @@ namespace ArxLibertatisFTLConverter
             // Then assign the basecolor to the new png file we dumped
             var material1 = new MaterialBuilder()
                 .WithBaseColor(texturepath)
-                .WithDoubleSide(false)
+                .WithDoubleSide(true)
                 .WithMetallicRoughnessShader();
 
                 
-            var mesh = new MeshBuilder<VERTEX>(fileName);
+            var mesh = new MeshBuilder<VERTEX, VertexTexture1>(fileName);
 
             //1 - points, 2 - lines, 3 - tris
             var prim = mesh.UsePrimitive(material1,3);
@@ -191,7 +203,20 @@ namespace ArxLibertatisFTLConverter
                 VERTEX v2 = new VERTEX(position2, orderedVertexNorms[i + 1]);
                 VERTEX v3 = new VERTEX(position3, orderedVertexNorms[i + 2]);
 
-                prim.AddTriangle(v1,v2,v3);
+                //UV coords
+                // XYZ here is meaningless, just accessors 
+                VertexTexture1 cor1 = new VertexTexture1(new Vector2(orderedU[i / 3].X,orderedV[i / 3].X));
+                VertexTexture1 cor2 = new VertexTexture1(new Vector2(orderedU[i / 3].Y, orderedV[i / 3].Y));
+                VertexTexture1 cor3 = new VertexTexture1(new Vector2(orderedU[i / 3].Z, orderedV[i / 3].Z));
+
+                //Final vertex structure
+
+                //this is extremely verbose, jesus
+                VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty> ver1 = new SharpGLTF.Geometry.VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty>(v1,cor1);
+                VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty> ver2 = new SharpGLTF.Geometry.VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty>(v2, cor2);
+                VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty> ver3 = new SharpGLTF.Geometry.VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty>(v3, cor3);
+
+                prim.AddTriangle(ver1,ver2,ver3);
             }
 
             
