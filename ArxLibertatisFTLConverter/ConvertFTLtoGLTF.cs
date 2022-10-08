@@ -123,6 +123,7 @@ namespace ArxLibertatisFTLConverter
                 vertsVec3[i].Z = baseVerts[i].Z;
             }
 
+            // various lists of various shit that is hopefully ordered correctly according to faceList vid
             List<Vector3> orderedVertex = new List<Vector3>();
             List<Vector3> orderedVertexNorms = new List<Vector3>();
             List<Vector3> orderedU = new List<Vector3>();
@@ -159,7 +160,7 @@ namespace ArxLibertatisFTLConverter
                 }
 
                 
-                // order from ov, ou
+                // order from ov, ou, I didn't do this but it seems to work anyway
                 orderedU.Add(new Vector3(u[0], u[1], u[2]));
                 orderedV.Add(new Vector3(v[0], v[1], v[2]));
 
@@ -167,59 +168,66 @@ namespace ArxLibertatisFTLConverter
 
             }
 
-            var texturepath = materials[0].textureFile ;
-                
 
-            //THIS POS gltf doesn't accept BMP so we gotta convert it to PNG first
-            using (SixLabors.ImageSharp.Image image = SixLabors.ImageSharp.Image.Load(texturepath))
-            {
-                image.SaveAsPng(texturepath);
-            }
 
-            // Then assign the basecolor to the new png file we dumped
-            var material1 = new MaterialBuilder()
-                .WithBaseColor(texturepath)
-                .WithDoubleSide(true)
-                .WithMetallicRoughnessShader();
-
-                
             var mesh = new MeshBuilder<VERTEX, VertexTexture1>(fileName);
 
-            //1 - points, 2 - lines, 3 - tris
-            var prim = mesh.UsePrimitive(material1,3);
 
-            // base mesh
-     
-            for (int i = 0; i < orderedVertex.Count; i+=3)
+            for (int textureIndex = 0; textureIndex != materials.Length; textureIndex++)
             {
-                //Vertice Positions
-                Vector3 position1 = new Vector3(orderedVertex[i].X, orderedVertex[i].Y,orderedVertex[i].Z);
-                Vector3 position2 = new Vector3(orderedVertex[i + 1].X, orderedVertex[i + 1].Y, orderedVertex[i + 1].Z);
-                Vector3 position3 = new Vector3(orderedVertex[i + 2].X, orderedVertex[i + 2].Y, orderedVertex[i + 2].Z);
+                var texturepath = materials[textureIndex].textureFile;
 
-                // create VERTEX with position and normal (SharpGLTF.Geometry.VertexTypes.VertexPositionNormal;)
-                // arx format supplies vertex normals and face normals, no idea how to get GLTF to accept both in a meaningful way
-                VERTEX v1 = new VERTEX(position1, orderedVertexNorms[i]);
-                VERTEX v2 = new VERTEX(position2, orderedVertexNorms[i + 1]);
-                VERTEX v3 = new VERTEX(position3, orderedVertexNorms[i + 2]);
 
-                //UV coords
-                // XYZ here is meaningless, just accessors 
-                VertexTexture1 cor1 = new VertexTexture1(new Vector2(orderedU[i / 3].X,orderedV[i / 3].X));
-                VertexTexture1 cor2 = new VertexTexture1(new Vector2(orderedU[i / 3].Y, orderedV[i / 3].Y));
-                VertexTexture1 cor3 = new VertexTexture1(new Vector2(orderedU[i / 3].Z, orderedV[i / 3].Z));
+                //THIS POS gltf doesn't accept BMP so we gotta convert it to PNG first
+                using (SixLabors.ImageSharp.Image image = SixLabors.ImageSharp.Image.Load(texturepath))
+                {
+                    image.SaveAsPng(texturepath);
+                }
 
-                //Final vertex structure
+                // Then assign the basecolor to the new png file we dumped
 
-                //this is extremely verbose, jesus
-                VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty> ver1 = new SharpGLTF.Geometry.VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty>(v1,cor1);
-                VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty> ver2 = new SharpGLTF.Geometry.VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty>(v2, cor2);
-                VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty> ver3 = new SharpGLTF.Geometry.VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty>(v3, cor3);
+                var material1 = new MaterialBuilder()
+                    .WithBaseColor(texturepath)
+                    .WithDoubleSide(true)
+                    .WithMetallicRoughnessShader()
+                    .WithAlpha();
 
-                prim.AddTriangle(ver1,ver2,ver3);
+
+                //1 - points, 2 - lines, 3 - tris
+                var prim = mesh.UsePrimitive(material1, 3);
+
+                // base mesh
+
+                for (int i = 0; i < orderedVertex.Count; i += 3)
+                {
+                    //Vertice Positions
+                    Vector3 position1 = new Vector3(orderedVertex[i].X, orderedVertex[i].Y, orderedVertex[i].Z);
+                    Vector3 position2 = new Vector3(orderedVertex[i + 1].X, orderedVertex[i + 1].Y, orderedVertex[i + 1].Z);
+                    Vector3 position3 = new Vector3(orderedVertex[i + 2].X, orderedVertex[i + 2].Y, orderedVertex[i + 2].Z);
+
+                    // create VERTEX with position and normal (SharpGLTF.Geometry.VertexTypes.VertexPositionNormal;)
+                    // arx format supplies vertex normals and face normals, no idea how to get GLTF to accept both in a meaningful way
+                    VERTEX v1 = new VERTEX(position1, orderedVertexNorms[i]);
+                    VERTEX v2 = new VERTEX(position2, orderedVertexNorms[i + 1]);
+                    VERTEX v3 = new VERTEX(position3, orderedVertexNorms[i + 2]);
+
+                    //UV coords
+                    // XYZ here is meaningless, just accessors 
+                    VertexTexture1 cor1 = new VertexTexture1(new Vector2(orderedU[i / 3].X, orderedV[i / 3].X));
+                    VertexTexture1 cor2 = new VertexTexture1(new Vector2(orderedU[i / 3].Y, orderedV[i / 3].Y));
+                    VertexTexture1 cor3 = new VertexTexture1(new Vector2(orderedU[i / 3].Z, orderedV[i / 3].Z));
+
+                    //Final vertex structure
+
+                    //this is extremely verbose, jesus
+                    VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty> ver1 = new SharpGLTF.Geometry.VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty>(v1, cor1);
+                    VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty> ver2 = new SharpGLTF.Geometry.VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty>(v2, cor2);
+                    VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty> ver3 = new SharpGLTF.Geometry.VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty>(v3, cor3);
+
+                    prim.AddTriangle(ver1, ver2, ver3);
+                }
             }
 
-            
 
             var scene = new SharpGLTF.Scenes.SceneBuilder();
 
