@@ -1,7 +1,9 @@
 ﻿using ArxLibertatisEditorIO.RawIO.FTL;
+using ArxLibertatisEditorIO.Util;
 using SharpGLTF.Geometry;
 using SharpGLTF.Geometry.VertexTypes;
 using SharpGLTF.Materials;
+using SixLabors.ImageSharp;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -16,9 +18,18 @@ namespace ArxLibertatisFTLConverter
             public string name;
             public List<Vector3> verts = new List<Vector3>();
             public List<Vector3> normals = new List<Vector3>();
+            //vec 3 for per triangle
             public List<Vector3> U = new List<Vector3>();
             public List<Vector3> V = new List<Vector3>();
+            public List<int> textureID = new List<int>();
         }
+
+        private class Material
+        {
+            public string name;
+            public string textureFile;
+        }
+
         public static void Convert(string file)
         {
 
@@ -58,22 +69,17 @@ namespace ArxLibertatisFTLConverter
                 return;
             }
 
-
             Directory.CreateDirectory(outputDir);
-
 
             //Leverage FTL IO 
 
-
             FTL_IO fTL_IO = new FTL_IO();
-
 
             using (FileStream fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             {
                 Stream s = FTL_IO.EnsureUnpacked(fs);
                 fTL_IO.ReadFrom(s);
             }
-
 
             if (debug)
             {
@@ -86,17 +92,71 @@ namespace ArxLibertatisFTLConverter
                 Console.WriteLine("");
                 Console.WriteLine("###END###");
             }
+            //generate material list
 
+            Material[] materials = new Material[fTL_IO._3DDataSection.textureContainers.Length];
+
+            for (int i = 0; i < materials.Length; ++i)
+            {
+                string texConName = IOHelper.GetString(fTL_IO._3DDataSection.textureContainers[i].name);
+
+                string tmpName = Path.Combine(gameDir, Path.GetDirectoryName(texConName), Path.GetFileNameWithoutExtension(texConName));
+                if (File.Exists(tmpName + ".jpg"))
+                {
+                    texConName = tmpName + ".jpg";
+                }
+                else if (File.Exists(tmpName + ".bmp"))
+                {
+                    texConName = tmpName + ".bmp";
+                }
+
+                if (File.Exists(texConName))
+                {
+                    File.Copy(texConName, Path.Combine(outputDir, Path.GetFileName(texConName)), true);
+                }
+                else
+                {
+                    File.WriteAllText(Path.Combine(outputDir, Path.GetFileName(texConName)), "could not find texture");
+                }
+
+                Material mat = new Material
+                {
+                    name = Path.GetFileNameWithoutExtension(texConName),
+                    textureFile = texConName
+                };
+                materials[i] = mat;
+                //THIS POS gltf doesn't accept BMP so we gotta convert it to PNG first
+                //TODO: Convert (0,0,0) to alpha ?
+                using (SixLabors.ImageSharp.Image image = SixLabors.ImageSharp.Image.Load(mat.textureFile))
+                {
+                    image.SaveAsPng(mat.textureFile);
+                }
+
+            }
+
+            if (debug)
+            {
+
+                Console.WriteLine("###Debug Texture Info###");
+                Console.Write("Texture Amount: ");
+                Console.Write(materials.Length);
+                Console.WriteLine("");
+                for (int i = 0; i != materials.Length; i++)
+                {
+                    Console.Write(materials[i].name + " : ");
+                    Console.Write(materials[i].textureFile + " \n");
+                }
+                Console.WriteLine("###END###");
+
+            }
 
             //generate lists of ordered vertex data
             //TODO: Figure out of tripling the number of verts is an issue or not
-            //TODO: Materials
 
             OrderedMeshData orderedMeshData = new OrderedMeshData
             {
                 name = fileName
             };
-
 
             for (int i = 0; i < fTL_IO._3DDataSection.faceList.Length; ++i)
             {
@@ -108,16 +168,16 @@ namespace ArxLibertatisFTLConverter
                     EERIE_OLD_VERTEX vert = fTL_IO._3DDataSection.vertexList[face.vid[j]];
                     //append to ordered mesh verts
                     orderedMeshData.verts.Add(new Vector3(vert.vert.x, vert.vert.y, vert.vert.z));
-
-                    // add Uvs in order
-
-
                     orderedMeshData.normals.Add(new Vector3(vert.norm.x, vert.norm.y, vert.norm.z));
 
                 }
 
+                //apparently UV's are ordered properly to begin with
+
                 orderedMeshData.U.Add(new Vector3(face.u[0], face.u[1], face.u[2]));
                 orderedMeshData.V.Add(new Vector3(face.v[0], face.v[1], face.v[2]));
+
+                orderedMeshData.textureID.Add(face.texid);
 
             }
 
@@ -139,11 +199,16 @@ namespace ArxLibertatisFTLConverter
 
             // GLTF danger zone / overly verbose shitbin from here onwards
 
-            //TODO: split mesh per group
             MeshBuilder<VertexPositionNormal, VertexTexture1> sceneMesh = new MeshBuilder<VertexPositionNormal, VertexTexture1>(fileName);
 
+            for (int i = 0; i != materials.Length; i++)
+            {
+                Console.Write(materials[i].name + " : ");
+                Console.Write(materials[i].textureFile + " \n");
+            }
+
             MaterialBuilder material = new MaterialBuilder()
-                .WithDoubleSide(true);
+              .WithDoubleSide(true);
 
             PrimitiveBuilder<MaterialBuilder, VertexPositionNormal, VertexTexture1, VertexEmpty> primitives = sceneMesh.UsePrimitive(material, 3);
 
@@ -169,18 +234,13 @@ namespace ArxLibertatisFTLConverter
             //https://www.energid.com/resources/orientation-calculator
             //that site converts from sane numbers to whatever backward crackhead numerical system that quaternions use
             //no, I don't care about gymbal lock, my brother in christ you have been played for an absolute fool
-            Quaternion fixRotation = new Quaternion(0,0,1,0);
+            Quaternion fixRotation = new Quaternion(0, 0, 1, 0);
             SharpGLTF.Transforms.AffineTransform defaultTransform = new SharpGLTF.Transforms.AffineTransform(Vector3.One, fixRotation, Vector3.Zero);
             scene.AddRigidMesh(sceneMesh, defaultTransform);
 
             SharpGLTF.Schema2.ModelRoot model = scene.ToGltf2();
 
             model.SaveGLTF(outputName);
-
-
-
-
-
 
         }
     }
