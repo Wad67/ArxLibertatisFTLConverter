@@ -39,7 +39,7 @@ namespace ArxLibertatisFTLConverter
             string outputDir = Path.Combine(parentDir, fileName + "_FTLToGLTF");
             Directory.CreateDirectory(outputDir);
             string outputName = Path.Combine(outputDir, fileName + ".gltf");
-            string gameDir = Util.GetParentWithName(parentDir, "game");
+            string gameDir = Util.GetParentWithName(parentDir, "Game");
             if (gameDir != null)
             {
                 Settings.dataDir = Path.GetDirectoryName(gameDir);
@@ -114,6 +114,7 @@ namespace ArxLibertatisFTLConverter
                 }
             }
 
+            // ODD CONVERSION, 'W' ELEMENT OF VEC4 ARRAY APEARS MEANINGLESS ?
             Vector3[] vertsVec3 = new Vector3[baseVerts.Length];
             for (int i = 0; i < baseVerts.Length; i++)
             {
@@ -122,8 +123,8 @@ namespace ArxLibertatisFTLConverter
                 vertsVec3[i].Z = baseVerts[i].Z;
             }
 
-            List<Vector3> triangles = new List<Vector3>();
-            List<Vector3> faceNormals = new List<Vector3>();
+            List<Vector3> orderedVertex = new List<Vector3>();
+            List<Vector3> orderedVertexNorms = new List<Vector3>();
 
             for (int i = 0; i < ftl._3DDataSection.faceList.Length; ++i)
             {
@@ -141,41 +142,23 @@ namespace ArxLibertatisFTLConverter
                 var normals = face.nrmls;
                 var temp = face.temp;
 
-                //    Console.WriteLine("Dump face data:");
-                //    Console.WriteLine(face); //ArxLibertatisEditorIO.RawIO.FTL.EERIE_FACE_FTL
-                //    Console.WriteLine(faceType); // 1 || 3 ? No idea what the different types represent
-                //    Console.WriteLine(rgb); // array .. Seems to be always 0? Maybe used in engine for face coloration? no idea
-                //    Console.WriteLine(vid); // array ..Appears in groups of three.. BINGO!! appears to be vertex ordering data
-                //    Console.WriteLine(texid); // always 0? May be for multiple textures, unsure if multiple even exist
-                //    Console.WriteLine(u); // array ..Appears in groups of three.. floating point always under 0   
-                //    Console.WriteLine(v); // array .. As above, but not the same
-                //    Console.WriteLine(ou); //array .. Also looks like it is references vertex?
-                //    Console.WriteLine(ov); //array .. As above, but not the same
-                //    Console.WriteLine(transval); // transparency value, float, mostly always 0 ?
-               //     Console.WriteLine(norm); // appears to be normal value per face ??
-                //    Console.WriteLine(normals); //  massive array just full of zeroes, no idea what it is meant to do
-                //    Console.WriteLine(temp); // some random value
-
-
+  
                 //select from vertsVec3, according to order in 'vid', append to triangles list
                 for (int j = 0; j < vid.Length; j++)
                 {
-                    triangles.Add(vertsVec3[vid[j]]);
+                    orderedVertex.Add(vertsVec3[vid[j]]);
+
+                    orderedVertexNorms.Add(baseNorms[vid[j]]);
                 }
 
-                //add per face normal
 
-                faceNormals.Add(new Vector3(norm.x,norm.y,norm.z));
-                
 
             }
 
-            Console.WriteLine(triangles.Count);
-            var texturepath = materials[0].textureFile;
+            var texturepath = materials[0].textureFile ;
                 
 
             //THIS POS gltf doesn't accept BMP so we gotta convert it to PNG first
-            MemoryStream convertedImage = new MemoryStream();
             using (SixLabors.ImageSharp.Image image = SixLabors.ImageSharp.Image.Load(texturepath))
             {
                 image.SaveAsPng(texturepath);
@@ -188,30 +171,30 @@ namespace ArxLibertatisFTLConverter
                 .WithMetallicRoughnessShader();
 
                 
-            var mesh = new MeshBuilder<VERTEX>("ArxMesh");
+            var mesh = new MeshBuilder<VERTEX>(fileName);
+
+            //1 - points, 2 - lines, 3 - tris
             var prim = mesh.UsePrimitive(material1,3);
 
             // base mesh
      
-            for (int i = 0; i < triangles.Count; i+=3)
+            for (int i = 0; i < orderedVertex.Count; i+=3)
             {
-                Console.WriteLine(triangles[i]);
                 //Vertice Positions
-                Vector3 position1 = new Vector3(triangles[i].X, triangles[i].Y,triangles[i].Z);
-                Vector3 position2 = new Vector3(triangles[i + 1].X, triangles[i + 1].Y, triangles[i + 1].Z);
-                Vector3 position3 = new Vector3(triangles[i + 2].X, triangles[i + 2].Y, triangles[i + 2].Z);
+                Vector3 position1 = new Vector3(orderedVertex[i].X, orderedVertex[i].Y,orderedVertex[i].Z);
+                Vector3 position2 = new Vector3(orderedVertex[i + 1].X, orderedVertex[i + 1].Y, orderedVertex[i + 1].Z);
+                Vector3 position3 = new Vector3(orderedVertex[i + 2].X, orderedVertex[i + 2].Y, orderedVertex[i + 2].Z);
 
-                //Vertice Normals.. but it's per face so just use the one for the face per each vertice???
-                Vector3 normal1 = faceNormals[i / 3];
-
-                VERTEX v1 = new VERTEX(position1, normal1);
-                VERTEX v2 = new VERTEX(position2, normal1);
-                VERTEX v3 = new VERTEX(position3, normal1);
+                // create VERTEX with position and normal (SharpGLTF.Geometry.VertexTypes.VertexPositionNormal;)
+                // arx format supplies vertex normals and face normals, no idea how to get GLTF to accept both in a meaningful way
+                VERTEX v1 = new VERTEX(position1, orderedVertexNorms[i]);
+                VERTEX v2 = new VERTEX(position2, orderedVertexNorms[i + 1]);
+                VERTEX v3 = new VERTEX(position3, orderedVertexNorms[i + 2]);
 
                 prim.AddTriangle(v1,v2,v3);
             }
 
-            Console.WriteLine(mesh);
+            
 
             var scene = new SharpGLTF.Scenes.SceneBuilder();
 
