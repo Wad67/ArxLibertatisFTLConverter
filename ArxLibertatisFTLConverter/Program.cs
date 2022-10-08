@@ -13,7 +13,7 @@ namespace ArxLibertatisFTLConverter
             if (fileLower.EndsWith(".ftl"))
             {
                 //  ConvertFTLToOBJ.Convert(file);
-                ConvertFTLtoGLTF.Convert(file);
+                ConvertFTLtoGLTF2.Convert(file);
             }
             else if (fileLower.EndsWith(".obj"))
             {

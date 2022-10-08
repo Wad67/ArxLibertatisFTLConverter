@@ -15,6 +15,10 @@ using SixLabors.ImageSharp;
 
 
 
+//TODO: Rewrite the entirety of this using the face group loop
+
+
+
 namespace ArxLibertatisFTLConverter
 {
    using VERTEX = SharpGLTF.Geometry.VertexTypes.VertexPositionNormal;
@@ -131,6 +135,8 @@ namespace ArxLibertatisFTLConverter
 
 
 
+
+
             for (int i = 0; i < ftl._3DDataSection.faceList.Length; ++i)
             {
                 var face = ftl._3DDataSection.faceList[i];
@@ -172,7 +178,7 @@ namespace ArxLibertatisFTLConverter
 
             var mesh = new MeshBuilder<VERTEX, VertexTexture1>(fileName);
 
-
+            // I'm pretty sure this makes a duplicate mesh for every material, oh well
             for (int textureIndex = 0; textureIndex != materials.Length; textureIndex++)
             {
                 var texturepath = materials[textureIndex].textureFile;
