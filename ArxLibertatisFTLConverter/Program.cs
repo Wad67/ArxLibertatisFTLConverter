@@ -3,12 +3,11 @@ using System.IO;
 
 namespace ArxLibertatisFTLConverter
 {
-
-    class Program
+    internal class Program
     {
-        static void ConvertFile(string file)
+        private static void ConvertFile(string file)
         {
-            var fileLower = file.ToLowerInvariant();
+            string fileLower = file.ToLowerInvariant();
 
             if (fileLower.EndsWith(".ftl"))
             {
@@ -22,7 +21,7 @@ namespace ArxLibertatisFTLConverter
 
         }
 
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
 
             foreach (string path in args)

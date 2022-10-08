@@ -1,16 +1,15 @@
 ﻿using ArxLibertatisEditorIO.RawIO.FTL;
+using SharpGLTF.Geometry;
+using SharpGLTF.Geometry.VertexTypes;
+using SharpGLTF.Materials;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
-using SharpGLTF.Geometry;
-using SharpGLTF.Geometry.VertexTypes;
-using SharpGLTF.Materials;
-using SharpGLTF.Schema2;
 
 namespace ArxLibertatisFTLConverter
 {
-    class ConvertFTLtoGLTF2
+    internal class ConvertFTLtoGLTF2
     {
         private class OrderedMeshData
         {
@@ -68,9 +67,9 @@ namespace ArxLibertatisFTLConverter
             FTL_IO fTL_IO = new FTL_IO();
 
 
-            using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (FileStream fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             {
-                var s = FTL_IO.EnsureUnpacked(fs);
+                Stream s = FTL_IO.EnsureUnpacked(fs);
                 fTL_IO.ReadFrom(s);
             }
 
@@ -92,19 +91,20 @@ namespace ArxLibertatisFTLConverter
             //TODO: Figure out of tripling the number of verts is an issue or not
             //TODO: Materials
 
-            OrderedMeshData orderedMeshData = new OrderedMeshData();
-
-            orderedMeshData.name = fileName;
+            OrderedMeshData orderedMeshData = new OrderedMeshData
+            {
+                name = fileName
+            };
 
 
             for (int i = 0; i < fTL_IO._3DDataSection.faceList.Length; ++i)
             {
-                var face = fTL_IO._3DDataSection.faceList[i];
+                EERIE_FACE_FTL face = fTL_IO._3DDataSection.faceList[i];
 
                 for (int j = 0; j < face.vid.Length; j++)
                 {
                     //select vertex from face vertex index list
-                    var vert = fTL_IO._3DDataSection.vertexList[face.vid[j]];
+                    EERIE_OLD_VERTEX vert = fTL_IO._3DDataSection.vertexList[face.vid[j]];
                     //append to ordered mesh verts
                     orderedMeshData.verts.Add(new Vector3(vert.vert.x, vert.vert.y, vert.vert.z));
 
@@ -138,12 +138,12 @@ namespace ArxLibertatisFTLConverter
             // GLTF danger zone / overly verbose shitbin from here onwards
 
             //TODO: split mesh per group
-            var sceneMesh = new MeshBuilder<VertexPositionNormal, VertexTexture1>(fileName);
+            MeshBuilder<VertexPositionNormal, VertexTexture1> sceneMesh = new MeshBuilder<VertexPositionNormal, VertexTexture1>(fileName);
 
-            var material = new MaterialBuilder()
+            MaterialBuilder material = new MaterialBuilder()
                 .WithDoubleSide(true);
 
-            var primitives = sceneMesh.UsePrimitive(material, 3);
+            PrimitiveBuilder<MaterialBuilder, VertexPositionNormal, VertexTexture1, VertexEmpty> primitives = sceneMesh.UsePrimitive(material, 3);
 
             for (int i = 0; i < orderedMeshData.verts.Count; i += 3)
             {
@@ -162,10 +162,10 @@ namespace ArxLibertatisFTLConverter
                 primitives.AddTriangle(ver1, ver2, ver3);
             }
 
-            var scene = new SharpGLTF.Scenes.SceneBuilder();
+            SharpGLTF.Scenes.SceneBuilder scene = new SharpGLTF.Scenes.SceneBuilder();
             scene.AddRigidMesh(sceneMesh, Matrix4x4.Identity);
 
-            var model = scene.ToGltf2();
+            SharpGLTF.Schema2.ModelRoot model = scene.ToGltf2();
 
             model.SaveGLTF(outputName);
 
@@ -173,7 +173,7 @@ namespace ArxLibertatisFTLConverter
 
 
 
-            
+
         }
     }
 }

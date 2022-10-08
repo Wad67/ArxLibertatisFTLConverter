@@ -6,12 +6,11 @@ using CSWavefront.Util;
 using SharpGLTF.Geometry;
 using SharpGLTF.Geometry.VertexTypes;
 using SharpGLTF.Materials;
-using SharpGLTF.Schema2;
+using SixLabors.ImageSharp;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
-using SixLabors.ImageSharp;
 
 
 
@@ -21,10 +20,9 @@ using SixLabors.ImageSharp;
 
 namespace ArxLibertatisFTLConverter
 {
-   using VERTEX = SharpGLTF.Geometry.VertexTypes.VertexPositionNormal;
+    using VERTEX = SharpGLTF.Geometry.VertexTypes.VertexPositionNormal;
 
-
-    class ConvertFTLtoGLTF
+    internal class ConvertFTLtoGLTF
     {
         private class Material
         {
@@ -56,12 +54,12 @@ namespace ArxLibertatisFTLConverter
             FTL_IO ftl = new FTL_IO();
 
 
-            using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (FileStream fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             {
-                var s = FTL_IO.EnsureUnpacked(fs);
+                Stream s = FTL_IO.EnsureUnpacked(fs);
                 ftl.ReadFrom(s);
             }
-            
+
 
             Vector4[] baseVerts = new Vector4[ftl._3DDataSection.vertexList.Length];
             Vector3[] baseNorms = new Vector3[baseVerts.Length];
@@ -70,7 +68,7 @@ namespace ArxLibertatisFTLConverter
             //load base vertex data
             for (int i = 0; i < baseVerts.Length; ++i)
             {
-                var vert = ftl._3DDataSection.vertexList[i];
+                EERIE_OLD_VERTEX vert = ftl._3DDataSection.vertexList[i];
                 baseVerts[i] = new Vector4(vert.vert.x, -vert.vert.y, vert.vert.z, 1);
                 baseNorms[i] = new Vector3(vert.norm.x, -vert.norm.y, vert.norm.z);
             }
@@ -78,7 +76,7 @@ namespace ArxLibertatisFTLConverter
             //load materials
             for (int i = 0; i < materials.Length; ++i)
             {
-                var texConName = IOHelper.GetString(ftl._3DDataSection.textureContainers[i].name);
+                string texConName = IOHelper.GetString(ftl._3DDataSection.textureContainers[i].name);
                 if (Settings.dataDir != null)
                 {
                     string tmpName = Path.Combine(Settings.dataDir, Path.GetDirectoryName(texConName), Path.GetFileNameWithoutExtension(texConName));
@@ -110,8 +108,8 @@ namespace ArxLibertatisFTLConverter
             //groups
             for (int i = 0; i < ftl._3DDataSection.groups.Length; ++i)
             {
-                var g = ftl._3DDataSection.groups[i];
-                var name = IOHelper.GetStringSafe(g.group.name).Replace(' ', '_');
+                FTL_IO_3D_DATA_GROUP g = ftl._3DDataSection.groups[i];
+                string name = IOHelper.GetStringSafe(g.group.name).Replace(' ', '_');
                 for (int j = 0; j < g.indices.Length; j++)
                 {
                     indexToGroup[g.indices[j]].Add(name);
@@ -139,21 +137,21 @@ namespace ArxLibertatisFTLConverter
 
             for (int i = 0; i < ftl._3DDataSection.faceList.Length; ++i)
             {
-                var face = ftl._3DDataSection.faceList[i];
-                var faceType = face.facetype;
-                var rgb = face.rgb;
-                var vid = face.vid;
-                var texid = face.texid;
-                var u = face.u;
-                var v = face.v;
-                var ou = face.ou;
-                var ov = face.ov;
-                var transval = face.transval;
-                var norm = face.norm;
-                var normals = face.nrmls;
-                var temp = face.temp;
+                EERIE_FACE_FTL face = ftl._3DDataSection.faceList[i];
+                PolyType faceType = face.facetype;
+                uint[] rgb = face.rgb;
+                ushort[] vid = face.vid;
+                short texid = face.texid;
+                float[] u = face.u;
+                float[] v = face.v;
+                short[] ou = face.ou;
+                short[] ov = face.ov;
+                float transval = face.transval;
+                ArxLibertatisEditorIO.RawIO.Shared.SavedVec3 norm = face.norm;
+                ArxLibertatisEditorIO.RawIO.Shared.SavedVec3[] normals = face.nrmls;
+                float temp = face.temp;
 
-  
+
                 //select from vertsVec3, according to order in 'vid', append to triangles list
                 for (int j = 0; j < vid.Length; j++)
                 {
@@ -161,11 +159,11 @@ namespace ArxLibertatisFTLConverter
 
                     orderedVertexNorms.Add(baseNorms[vid[j]]);
 
-                    
+
 
                 }
 
-                
+
                 // order from ov, ou, I didn't do this but it seems to work anyway
                 orderedU.Add(new Vector3(u[0], u[1], u[2]));
                 orderedV.Add(new Vector3(v[0], v[1], v[2]));
@@ -176,12 +174,12 @@ namespace ArxLibertatisFTLConverter
 
 
 
-            var mesh = new MeshBuilder<VERTEX, VertexTexture1>(fileName);
+            MeshBuilder<VERTEX, VertexTexture1> mesh = new MeshBuilder<VERTEX, VertexTexture1>(fileName);
 
             // I'm pretty sure this makes a duplicate mesh for every material, oh well
             for (int textureIndex = 0; textureIndex != materials.Length; textureIndex++)
             {
-                var texturepath = materials[textureIndex].textureFile;
+                string texturepath = materials[textureIndex].textureFile;
 
 
                 //THIS POS gltf doesn't accept BMP so we gotta convert it to PNG first
@@ -192,7 +190,7 @@ namespace ArxLibertatisFTLConverter
 
                 // Then assign the basecolor to the new png file we dumped
 
-                var material1 = new MaterialBuilder()
+                MaterialBuilder material1 = new MaterialBuilder()
                     .WithBaseColor(texturepath)
                     .WithDoubleSide(true)
                     .WithMetallicRoughnessShader()
@@ -200,7 +198,7 @@ namespace ArxLibertatisFTLConverter
 
 
                 //1 - points, 2 - lines, 3 - tris
-                var prim = mesh.UsePrimitive(material1, 3);
+                PrimitiveBuilder<MaterialBuilder, VERTEX, VertexTexture1, VertexEmpty> prim = mesh.UsePrimitive(material1, 3);
 
                 // base mesh
 
@@ -235,11 +233,11 @@ namespace ArxLibertatisFTLConverter
             }
 
 
-            var scene = new SharpGLTF.Scenes.SceneBuilder();
+            SharpGLTF.Scenes.SceneBuilder scene = new SharpGLTF.Scenes.SceneBuilder();
 
             scene.AddRigidMesh(mesh, Matrix4x4.Identity);
 
-            var model = scene.ToGltf2();
+            SharpGLTF.Schema2.ModelRoot model = scene.ToGltf2();
 
             model.SaveGLTF(outputName);
         }

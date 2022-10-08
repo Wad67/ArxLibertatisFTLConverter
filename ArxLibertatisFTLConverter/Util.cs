@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
+﻿using System.IO;
 
 namespace ArxLibertatisFTLConverter
 {
@@ -12,12 +9,12 @@ namespace ArxLibertatisFTLConverter
             DirectoryInfo di = new DirectoryInfo(dirPath);
             while (true)
             {
-                if(di.Name == name)
+                if (di.Name == name)
                 {
                     return di.FullName;
                 }
                 di = di.Parent;
-                if(di==null)
+                if (di == null)
                 {
                     return null;
                 }

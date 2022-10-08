@@ -37,9 +37,9 @@ namespace ArxLibertatisFTLConverter
 
             FTL_IO ftl = new FTL_IO();
 
-            using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (FileStream fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             {
-                var s = FTL_IO.EnsureUnpacked(fs);
+                Stream s = FTL_IO.EnsureUnpacked(fs);
                 ftl.ReadFrom(s);
             }
 
@@ -50,7 +50,7 @@ namespace ArxLibertatisFTLConverter
             //load base vertex data
             for (int i = 0; i < baseVerts.Length; ++i)
             {
-                var vert = ftl._3DDataSection.vertexList[i];
+                EERIE_OLD_VERTEX vert = ftl._3DDataSection.vertexList[i];
                 baseVerts[i] = new Vector4(vert.vert.x, -vert.vert.y, vert.vert.z, 1);
                 baseNorms[i] = new Vector3(vert.norm.x, -vert.norm.y, vert.norm.z);
             }
@@ -58,7 +58,7 @@ namespace ArxLibertatisFTLConverter
             //load materials
             for (int i = 0; i < materials.Length; ++i)
             {
-                var texConName = IOHelper.GetString(ftl._3DDataSection.textureContainers[i].name);
+                string texConName = IOHelper.GetString(ftl._3DDataSection.textureContainers[i].name);
                 if (Settings.dataDir != null)
                 {
                     string tmpName = Path.Combine(Settings.dataDir, Path.GetDirectoryName(texConName), Path.GetFileNameWithoutExtension(texConName));
@@ -90,8 +90,8 @@ namespace ArxLibertatisFTLConverter
             //groups
             for (int i = 0; i < ftl._3DDataSection.groups.Length; ++i)
             {
-                var g = ftl._3DDataSection.groups[i];
-                var name = IOHelper.GetStringSafe(g.group.name).Replace(' ', '_');
+                FTL_IO_3D_DATA_GROUP g = ftl._3DDataSection.groups[i];
+                string name = IOHelper.GetStringSafe(g.group.name).Replace(' ', '_');
                 for (int j = 0; j < g.indices.Length; j++)
                 {
                     indexToGroup[g.indices[j]].Add(name);
@@ -104,7 +104,7 @@ namespace ArxLibertatisFTLConverter
 
             for (int i = 0; i < ftl._3DDataSection.faceList.Length; ++i)
             {
-                var face = ftl._3DDataSection.faceList[i];
+                EERIE_FACE_FTL face = ftl._3DDataSection.faceList[i];
                 HashSet<string> groups = new HashSet<string>();
                 string materialName = "noMaterial";
                 if (face.texid >= 0)
@@ -144,8 +144,8 @@ namespace ArxLibertatisFTLConverter
             MtlFile mtl = new MtlFile();
             for (int i = 0; i < materials.Length; ++i)
             {
-                var myMat = materials[i];
-                var mat = mtl.materials[myMat.name];
+                Material myMat = materials[i];
+                CSWavefront.Raw.Material mat = mtl.materials[myMat.name];
                 mat.ambientColor = Vector3.Zero;
                 mat.diffuseColor = Vector3.One;
                 mat.specularColor = Vector3.Zero;
