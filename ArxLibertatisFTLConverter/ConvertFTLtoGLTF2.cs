@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
+using System.Linq;
 
 namespace ArxLibertatisFTLConverter
 {
@@ -194,6 +195,9 @@ namespace ArxLibertatisFTLConverter
                 Console.Write("UV coord Amount : ");
                 Console.Write(orderedMeshData.U.Count + orderedMeshData.V.Count);
                 Console.WriteLine("");
+                Console.Write("Face TexID's present : ");
+                Console.Write(string.Join(", ", orderedMeshData.textureID.Distinct().ToList()));
+                Console.WriteLine("");
                 Console.WriteLine("###END###");
             }
 
@@ -203,8 +207,8 @@ namespace ArxLibertatisFTLConverter
 
             for (int i = 0; i != materials.Length; i++)
             {
-                Console.Write(materials[i].name + " : ");
-                Console.Write(materials[i].textureFile + " \n");
+
+
             }
 
             MaterialBuilder material = new MaterialBuilder()
