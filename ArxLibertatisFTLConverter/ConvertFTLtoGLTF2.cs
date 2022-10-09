@@ -205,16 +205,32 @@ namespace ArxLibertatisFTLConverter
 
             MeshBuilder<VertexPositionNormal, VertexTexture1> sceneMesh = new MeshBuilder<VertexPositionNormal, VertexTexture1>(fileName);
 
+
+            //Setup list of GLTF material slots
+            List<MaterialBuilder> gltfMaterials = new List<MaterialBuilder>();
             for (int i = 0; i != materials.Length; i++)
             {
+                string texturepath = materials[i].textureFile;
 
+                MaterialBuilder newMaterial = new MaterialBuilder()
+                    .WithBaseColor(texturepath)
+                    .WithAlpha()
+                    .WithDoubleSide(true);
+                    
+
+                gltfMaterials.Add(newMaterial);
 
             }
 
-            MaterialBuilder material = new MaterialBuilder()
-              .WithDoubleSide(true);
+            //For multiple materials, have to define multiple primitive groups. 
+            //Each primitive group coincides with each material slot
+            //Some textureID's are -1, no idea what this means but I'm just going to subtract one from the count
+            List<PrimitiveBuilder<MaterialBuilder, VertexPositionNormal, VertexTexture1, VertexEmpty>> gltfPrimitives = new List<PrimitiveBuilder<MaterialBuilder, VertexPositionNormal, VertexTexture1, VertexEmpty>>();
+            for (int i = 0; i != orderedMeshData.textureID.Distinct().ToList().Count - 1; i++)
+            {
+                gltfPrimitives.Add(sceneMesh.UsePrimitive(gltfMaterials[i], 3));
 
-            PrimitiveBuilder<MaterialBuilder, VertexPositionNormal, VertexTexture1, VertexEmpty> primitives = sceneMesh.UsePrimitive(material, 3);
+            }
 
             for (int i = 0; i < orderedMeshData.verts.Count; i += 3)
             {
@@ -231,7 +247,16 @@ namespace ArxLibertatisFTLConverter
                 VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty> ver2 = new VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty>(v2, vt2);
                 VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty> ver3 = new VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty>(v3, vt3);
 
-                primitives.AddTriangle(ver1, ver2, ver3);
+                if(orderedMeshData.textureID[i / 3] == -1)
+                {
+
+                }
+                else
+                {
+                    gltfPrimitives[orderedMeshData.textureID[i / 3]].AddTriangle(ver1, ver2, ver3);
+                }
+
+               // primitives.AddTriangle(ver1, ver2, ver3);
             }
 
             SharpGLTF.Scenes.SceneBuilder scene = new SharpGLTF.Scenes.SceneBuilder();
@@ -240,6 +265,7 @@ namespace ArxLibertatisFTLConverter
             //no, I don't care about gymbal lock, my brother in christ you have been played for an absolute fool
             Quaternion fixRotation = new Quaternion(0, 0, 1, 0);
             SharpGLTF.Transforms.AffineTransform defaultTransform = new SharpGLTF.Transforms.AffineTransform(Vector3.One, fixRotation, Vector3.Zero);
+
             scene.AddRigidMesh(sceneMesh, defaultTransform);
 
             SharpGLTF.Schema2.ModelRoot model = scene.ToGltf2();
