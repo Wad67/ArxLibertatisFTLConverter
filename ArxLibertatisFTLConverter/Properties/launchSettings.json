@@ -2,7 +2,7 @@
   "profiles": {
     "ArxLibertatisFTLConverter": {
         "commandName": "Project",
-        "commandLineArgs": "\"D:\\SteamLibrary\\steamapps\\common\\Arx Fatalis\\Game\\graph\\obj3d\\interactive\\npc\\ratman_base\\ratman_base.ftl\""
+        "commandLineArgs": "\"D:\\SteamLibrary\\steamapps\\common\\Arx Fatalis\\Game\\graph\\obj3d\\interactive\\npc\\snake_woman_base\\snake_woman_base.ftl\""
     }
   }
 }

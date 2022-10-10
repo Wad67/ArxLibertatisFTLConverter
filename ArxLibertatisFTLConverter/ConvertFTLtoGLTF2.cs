@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
 using System.Linq;
+using SixLabors.ImageSharp.Processing;
 
 namespace ArxLibertatisFTLConverter
 {
@@ -123,15 +124,26 @@ namespace ArxLibertatisFTLConverter
                 Material mat = new Material
                 {
                     name = Path.GetFileNameWithoutExtension(texConName),
-                    textureFile = texConName
+                    textureFile = Path.Combine(outputDir, Path.GetFileName(texConName))
                 };
                 materials[i] = mat;
                 //THIS POS gltf doesn't accept BMP so we gotta convert it to PNG first
                 //TODO: Convert (0,0,0) to alpha ?
-                using (SixLabors.ImageSharp.Image image = SixLabors.ImageSharp.Image.Load(mat.textureFile))
+                using SixLabors.ImageSharp.Image image = SixLabors.ImageSharp.Image.Load(mat.textureFile);
+                image.Mutate(c => c.ProcessPixelRowsAsVector4(row =>
                 {
-                    image.SaveAsPng(mat.textureFile);
-                }
+                    for (int x = 0; x < row.Length; x++)
+                    {
+                        // convert 0,0,0,1 to 0,0,0,0
+                        if (row[x] == new Vector4(0, 0, 0, 1))
+                        {
+                            row[x] = new Vector4(0, 0, 0, 0);
+                        }
+
+                    }
+                }));
+                image.SaveAsPng(mat.textureFile);
+                
 
             }
 
@@ -214,10 +226,10 @@ namespace ArxLibertatisFTLConverter
 
                 MaterialBuilder newMaterial = new MaterialBuilder()
                     .WithBaseColor(texturepath)
-                    .WithAlpha()
+                    .WithAlpha(AlphaMode.MASK)
                     .WithDoubleSide(true);
                     
-
+                    
                 gltfMaterials.Add(newMaterial);
 
             }
@@ -226,7 +238,18 @@ namespace ArxLibertatisFTLConverter
             //Each primitive group coincides with each material slot
             //Some textureID's are -1, no idea what this means but I'm just going to subtract one from the count
             List<PrimitiveBuilder<MaterialBuilder, VertexPositionNormal, VertexTexture1, VertexEmpty>> gltfPrimitives = new List<PrimitiveBuilder<MaterialBuilder, VertexPositionNormal, VertexTexture1, VertexEmpty>>();
-            for (int i = 0; i != orderedMeshData.textureID.Distinct().ToList().Count - 1; i++)
+            //This value is set to one, if a TextureID of -1 exists
+            int IndexModifier = 0;
+
+            if (orderedMeshData.textureID.Contains(-1))
+            {
+                IndexModifier = 1;
+            }
+            else
+            {
+                IndexModifier = 0;
+            }
+            for (int i = 0; i != orderedMeshData.textureID.Distinct().ToList().Count - IndexModifier; i++)
             {
                 gltfPrimitives.Add(sceneMesh.UsePrimitive(gltfMaterials[i], 3));
 
