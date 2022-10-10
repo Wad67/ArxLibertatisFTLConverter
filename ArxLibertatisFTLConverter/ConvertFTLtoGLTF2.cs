@@ -1,5 +1,6 @@
 ﻿using ArxLibertatisEditorIO.RawIO.FTL;
 using ArxLibertatisEditorIO.Util;
+using ArxLibertatisEditorIO.RawIO.TEA;
 using SharpGLTF.Geometry;
 using SharpGLTF.Geometry.VertexTypes;
 using SharpGLTF.Materials;
@@ -26,6 +27,14 @@ namespace ArxLibertatisFTLConverter
             public List<int> textureID = new List<int>();
         }
 
+        private class AnimationData
+        {
+            public string name;
+            public THEA_HEADER tea_header = new THEA_HEADER();
+            public List<TEA_KEYFRAME> keyframes = new List<TEA_KEYFRAME>();
+
+        }
+
         private class Material
         {
             public string name;
@@ -45,6 +54,7 @@ namespace ArxLibertatisFTLConverter
             string outputDir = Path.Combine(parentDir, fileName + "_FTLToGLTF");
             string outputName = Path.Combine(outputDir, fileName + ".gltf");
             string gameDir = Util.GetParentWithName(parentDir, "Game");
+            string animDir = gameDir + "\\graph\\obj3d\\anims\\npc";
 
             if (debug)
             {
@@ -212,6 +222,62 @@ namespace ArxLibertatisFTLConverter
                 Console.WriteLine("");
                 Console.WriteLine("###END###");
             }
+
+            //Animation Handling Hell (AHH)
+            // AHHHHHHHHHHHHHH
+
+            TEA_IO tEA_IO = new TEA_IO();
+
+
+            //Generate list of paths to applicable animation files
+            //for model name* .tea
+            //TEA_IO read file
+            List<string> animationFiles = new List<string>();
+
+            List<AnimationData> animationDataList = new List<AnimationData>();
+
+            animationFiles.AddRange(Directory.GetFiles(animDir));
+
+            //This string formatting here is likely going to need a shitload of work, to find all the requisite tea files anyway
+            foreach(string path in animationFiles)
+            {
+                //Console.WriteLine(path);
+
+                string[] fileNamePieces = fileName.Split('_');
+
+                if (path.Contains(fileNamePieces[0]))
+                {
+                    Console.WriteLine(path);
+
+                    AnimationData animationDataItem = new AnimationData();
+                    animationDataItem.name = Path.GetFileName(path); //IOHelper.GetString(tEA_IO.header.identity);
+
+                    using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                    {
+                        Stream s = FTL_IO.EnsureUnpacked(fs);
+                        tEA_IO.ReadFrom(s);
+                    }
+
+                    TEA_KEYFRAME tea_keyframe = new TEA_KEYFRAME(tEA_IO);
+
+                    
+                    animationDataItem.tea_header = tEA_IO.header;
+                    animationDataItem.keyframes.Add(tea_keyframe);
+
+                    animationDataList.Add(animationDataItem);
+
+                }
+
+            }
+
+
+
+
+
+
+
+
+
 
             // GLTF danger zone / overly verbose shitbin from here onwards
 
