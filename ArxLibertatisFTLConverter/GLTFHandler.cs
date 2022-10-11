@@ -44,6 +44,23 @@ namespace ArxLibertatisFTLConverter
             public string textureFile;
         }
 
+        public class VertexGroup
+        {
+            public string name;
+            public int origin;
+            public int nb_index;
+            public int indexes;
+            public float size;
+
+            public List<int> indices = new List<int>();
+
+
+        }
+
+        public static void ConvertFromGLTF(string file)
+        {
+            //help
+        }
         public static void ConvertToGLTF(string file)
         {
 
@@ -143,6 +160,33 @@ namespace ArxLibertatisFTLConverter
                 orderedMeshData.V.Add(new Vector3(face.v[0], face.v[1], face.v[2]));
                 orderedMeshData.textureID.Add(face.texid);
             }
+
+
+            List<VertexGroup> vertexGroups = new List<VertexGroup>();
+
+            //groups
+            for (int i = 0; i < fTL_IO._3DDataSection.groups.Length; ++i)
+            {
+                FTL_IO_3D_DATA_GROUP g = fTL_IO._3DDataSection.groups[i];
+                VertexGroup newVertexGroup = new VertexGroup();
+                string name = IOHelper.GetStringSafe(g.group.name).Replace(' ', '_');
+
+                newVertexGroup.name = name;
+                newVertexGroup.origin = g.group.origin;
+                newVertexGroup.indexes = g.group.indexes;
+                newVertexGroup.nb_index = g.group.nb_index;
+                newVertexGroup.size = g.group.siz;
+
+
+                
+                for (int j = 0; j < g.indices.Length; j++)
+                {
+                    newVertexGroup.indices.Add(g.indices[j]);
+                    //indexToGroup[g.indices[j]].Add(name);
+                }
+                vertexGroups.Add(newVertexGroup);
+            }
+
             if (debug)
             {
                 Console.WriteLine("###Debug Pathinfo###");
@@ -188,9 +232,13 @@ namespace ArxLibertatisFTLConverter
                 Console.Write("Face TexID's present : ");
                 Console.Write(string.Join(", ", orderedMeshData.textureID.Distinct().ToList()));
                 Console.WriteLine("");
-                Console.WriteLine("###END###");
+                Console.Write("Vertex Groups present : \n");
+                for (int i = 0; i != vertexGroups.Count; i++)
+                {
+                    Console.Write(vertexGroups[i].name + "\n");
+                }
+
             }
-            //TODO: this
             //loadAnimations(string fileName, string animDir);
 
             OutputGLTF(materials, orderedMeshData, outputName);
@@ -265,6 +313,8 @@ namespace ArxLibertatisFTLConverter
 
                 // primitives.AddTriangle(ver1, ver2, ver3);
             }
+
+            
 
             SharpGLTF.Scenes.SceneBuilder scene = new SharpGLTF.Scenes.SceneBuilder();
             //https://www.energid.com/resources/orientation-calculator
