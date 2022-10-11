@@ -16,7 +16,7 @@ namespace ArxLibertatisFTLConverter
 {
     internal class ConvertFTLtoGLTF2
     {
-        private class OrderedMeshData
+        public class OrderedMeshData
         {
             public string name;
             public List<Vector3> verts = new List<Vector3>();
@@ -27,7 +27,7 @@ namespace ArxLibertatisFTLConverter
             public List<int> textureID = new List<int>();
         }
 
-        private class AnimationData
+        public class AnimationData
         {
             public string name;
             public THEA_HEADER tea_header = new THEA_HEADER();
@@ -35,7 +35,7 @@ namespace ArxLibertatisFTLConverter
 
         }
 
-        private class Material
+        public class Material
         {
             public string name;
             public string textureFile;
@@ -56,25 +56,6 @@ namespace ArxLibertatisFTLConverter
             string gameDir = Util.GetParentWithName(parentDir, "Game");
             string animDir = gameDir + "\\graph\\obj3d\\anims\\npc";
 
-            if (debug)
-            {
-                Console.WriteLine("###Debug Pathinfo###");
-                Console.Write("Parent Directory: ");
-                Console.Write(parentDir);
-                Console.WriteLine("");
-                Console.Write("Output Directory: ");
-                Console.Write(outputDir);
-                Console.WriteLine("");
-                Console.Write("Game Directory: ");
-                Console.Write(gameDir);
-                Console.WriteLine("");
-                Console.Write("Output Name: ");
-                Console.Write(outputDir);
-                Console.WriteLine("");
-                Console.WriteLine("###END###");
-
-            }
-
             if (gameDir == null)
             {
                 Console.WriteLine("Could not find game directory!");
@@ -83,31 +64,14 @@ namespace ArxLibertatisFTLConverter
 
             Directory.CreateDirectory(outputDir);
 
-            //Leverage FTL IO 
-
             FTL_IO fTL_IO = new FTL_IO();
-
             using (FileStream fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             {
                 Stream s = FTL_IO.EnsureUnpacked(fs);
                 fTL_IO.ReadFrom(s);
             }
-
-            if (debug)
-            {
-                Console.WriteLine("###Debug FTL_IO Info###");
-                Console.Write("Vertex Amount: ");
-                Console.Write(fTL_IO._3DDataSection.vertexList.Length);
-                Console.WriteLine("");
-                Console.Write("Face Amount : ");
-                Console.Write(fTL_IO._3DDataSection.faceList.Length);
-                Console.WriteLine("");
-                Console.WriteLine("###END###");
-            }
             //generate material list
-
             Material[] materials = new Material[fTL_IO._3DDataSection.textureContainers.Length];
-
             for (int i = 0; i < materials.Length; ++i)
             {
                 string texConName = IOHelper.GetString(fTL_IO._3DDataSection.textureContainers[i].name);
@@ -154,10 +118,43 @@ namespace ArxLibertatisFTLConverter
                 image.SaveAsPng(mat.textureFile);
 
             }
-
+            //generate lists of ordered vertex data
+            //TODO: Figure out of tripling the number of verts is an issue or not
+            OrderedMeshData orderedMeshData = new OrderedMeshData
+            {
+                name = fileName
+            };
+            for (int i = 0; i < fTL_IO._3DDataSection.faceList.Length; ++i)
+            {
+                EERIE_FACE_FTL face = fTL_IO._3DDataSection.faceList[i];
+                for (int j = 0; j < face.vid.Length; j++)
+                {
+                    //select vertex from face vertex index list
+                    EERIE_OLD_VERTEX vert = fTL_IO._3DDataSection.vertexList[face.vid[j]];
+                    //append to ordered mesh verts
+                    orderedMeshData.verts.Add(new Vector3(vert.vert.x, vert.vert.y, vert.vert.z));
+                    orderedMeshData.normals.Add(new Vector3(vert.norm.x, vert.norm.y, vert.norm.z));
+                }
+                //apparently UV's are ordered properly to begin with
+                orderedMeshData.U.Add(new Vector3(face.u[0], face.u[1], face.u[2]));
+                orderedMeshData.V.Add(new Vector3(face.v[0], face.v[1], face.v[2]));
+                orderedMeshData.textureID.Add(face.texid);
+            }
             if (debug)
             {
-
+                Console.WriteLine("###Debug Pathinfo###");
+                Console.Write("Parent Directory: ");
+                Console.Write(parentDir);
+                Console.WriteLine("");
+                Console.Write("Output Directory: ");
+                Console.Write(outputDir);
+                Console.WriteLine("");
+                Console.Write("Game Directory: ");
+                Console.Write(gameDir);
+                Console.WriteLine("");
+                Console.Write("Output Name: ");
+                Console.Write(outputDir);
+                Console.WriteLine("");
                 Console.WriteLine("###Debug Texture Info###");
                 Console.Write("Texture Amount: ");
                 Console.Write(materials.Length);
@@ -167,43 +164,13 @@ namespace ArxLibertatisFTLConverter
                     Console.Write(materials[i].name + " : ");
                     Console.Write(materials[i].textureFile + " \n");
                 }
-                Console.WriteLine("###END###");
-
-            }
-
-            //generate lists of ordered vertex data
-            //TODO: Figure out of tripling the number of verts is an issue or not
-
-            OrderedMeshData orderedMeshData = new OrderedMeshData
-            {
-                name = fileName
-            };
-
-            for (int i = 0; i < fTL_IO._3DDataSection.faceList.Length; ++i)
-            {
-                EERIE_FACE_FTL face = fTL_IO._3DDataSection.faceList[i];
-
-                for (int j = 0; j < face.vid.Length; j++)
-                {
-                    //select vertex from face vertex index list
-                    EERIE_OLD_VERTEX vert = fTL_IO._3DDataSection.vertexList[face.vid[j]];
-                    //append to ordered mesh verts
-                    orderedMeshData.verts.Add(new Vector3(vert.vert.x, vert.vert.y, vert.vert.z));
-                    orderedMeshData.normals.Add(new Vector3(vert.norm.x, vert.norm.y, vert.norm.z));
-
-                }
-
-                //apparently UV's are ordered properly to begin with
-
-                orderedMeshData.U.Add(new Vector3(face.u[0], face.u[1], face.u[2]));
-                orderedMeshData.V.Add(new Vector3(face.v[0], face.v[1], face.v[2]));
-
-                orderedMeshData.textureID.Add(face.texid);
-
-            }
-
-            if (debug)
-            {
+                Console.WriteLine("###Debug FTL_IO Info###");
+                Console.Write("Vertex Amount: ");
+                Console.Write(fTL_IO._3DDataSection.vertexList.Length);
+                Console.WriteLine("");
+                Console.Write("Face Amount : ");
+                Console.Write(fTL_IO._3DDataSection.faceList.Length);
+                Console.WriteLine("");
                 Console.WriteLine("###Debug Dump Ordered Mesh Data###");
                 Console.WriteLine(orderedMeshData.name);
                 Console.Write("Verts Amount: ");
@@ -220,13 +187,18 @@ namespace ArxLibertatisFTLConverter
                 Console.WriteLine("");
                 Console.WriteLine("###END###");
             }
-
             //TODO: this
             //loadAnimations(string fileName, string animDir);
 
+            OutputGLTF(materials, orderedMeshData, outputName);
+
+        }
+
+        public static void OutputGLTF(Material[] materials, OrderedMeshData orderedMeshData, string outputName )
+        {
             // GLTF danger zone / overly verbose shitbin from here onwards
 
-            MeshBuilder<VertexPositionNormal, VertexTexture1> sceneMesh = new MeshBuilder<VertexPositionNormal, VertexTexture1>(fileName);
+            MeshBuilder<VertexPositionNormal, VertexTexture1> sceneMesh = new MeshBuilder<VertexPositionNormal, VertexTexture1>(outputName);
 
             //Setup list of GLTF material slots
             List<MaterialBuilder> gltfMaterials = new List<MaterialBuilder>();
@@ -303,10 +275,8 @@ namespace ArxLibertatisFTLConverter
             SharpGLTF.Schema2.ModelRoot model = scene.ToGltf2();
 
             model.SaveGLTF(outputName);
-
         }
-
-        public static void loadAnimations(string fileName, string animDir)
+        public static void LoadAnimations(string fileName, string animDir)
         {
 
             //Animation Handling Hell (AHH)
