@@ -140,8 +140,7 @@ namespace ArxLibertatisFTLConverter
                 //THIS POS gltf doesn't accept BMP so we gotta convert it to PNG first
                 //TODO: Convert (0,0,0) to alpha ?
                 using SixLabors.ImageSharp.Image image = SixLabors.ImageSharp.Image.Load(mat.textureFile);
-                image.Mutate(c => c.ProcessPixelRowsAsVector4(row =>
-                {
+                image.Mutate(c => c.ProcessPixelRowsAsVector4(row => {
                     for (int x = 0; x < row.Length; x++)
                     {
                         // convert 0,0,0,1 to 0,0,0,0
@@ -153,7 +152,6 @@ namespace ArxLibertatisFTLConverter
                     }
                 }));
                 image.SaveAsPng(mat.textureFile);
-                
 
             }
 
@@ -223,59 +221,12 @@ namespace ArxLibertatisFTLConverter
                 Console.WriteLine("###END###");
             }
 
-            //Animation Handling Hell (AHH)
-            TEA_IO tEA_IO = new TEA_IO();
-            List<string> animationFiles = new List<string>();
-            List<AnimationData> animationDataList = new List<AnimationData>();
-            animationFiles.AddRange(Directory.GetFiles(animDir));
-
-            foreach(string path in animationFiles)
-            {
-                string[] fileNamePieces = fileName.Split('_');
-                //usually the tea files contain the first few characters of the FTL file, likely needs something better
-                if (path.Contains(fileNamePieces[0]))
-                {
-                    Console.WriteLine(path);
-                    AnimationData animationDataItem = new AnimationData();
-                    animationDataItem.name = Path.GetFileName(path); //IOHelper.GetString(tEA_IO.header.identity); // Gibberish
-                    TEA_KEYFRAME tEA_KEYFRAME = new TEA_KEYFRAME(tEA_IO);
-                    using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                    {
-                        Stream s = FTL_IO.EnsureUnpacked(fs);
-
-                        StructReader structReader = new StructReader(s);
-
-
-                        tEA_IO.ReadFrom(s);
-
-                        tEA_KEYFRAME.ReadFrom(structReader);
-                    }
-                    
-                    MemoryStream stream = new MemoryStream();
-                    tEA_IO.WriteTo(stream);
-
-                    animationDataItem.tea_header = tEA_IO.header;
-                    animationDataItem.keyframes.Add(tEA_KEYFRAME); 
-
-                    animationDataList.Add(animationDataItem);
-
-                }
-
-            }
-
-
-
-
-
-
-
-
-
+            //TODO: this
+            //loadAnimations(string fileName, string animDir);
 
             // GLTF danger zone / overly verbose shitbin from here onwards
 
             MeshBuilder<VertexPositionNormal, VertexTexture1> sceneMesh = new MeshBuilder<VertexPositionNormal, VertexTexture1>(fileName);
-
 
             //Setup list of GLTF material slots
             List<MaterialBuilder> gltfMaterials = new List<MaterialBuilder>();
@@ -284,11 +235,10 @@ namespace ArxLibertatisFTLConverter
                 string texturepath = materials[i].textureFile;
 
                 MaterialBuilder newMaterial = new MaterialBuilder()
-                    .WithBaseColor(texturepath)
-                    .WithAlpha(AlphaMode.MASK)
-                    .WithDoubleSide(true);
-                    
-                    
+                  .WithBaseColor(texturepath)
+                  .WithAlpha(AlphaMode.MASK)
+                  .WithDoubleSide(true);
+
                 gltfMaterials.Add(newMaterial);
 
             }
@@ -329,7 +279,7 @@ namespace ArxLibertatisFTLConverter
                 VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty> ver2 = new VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty>(v2, vt2);
                 VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty> ver3 = new VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty>(v3, vt3);
 
-                if(orderedMeshData.textureID[i / 3] == -1)
+                if (orderedMeshData.textureID[i / 3] == -1)
                 {
 
                 }
@@ -338,7 +288,7 @@ namespace ArxLibertatisFTLConverter
                     gltfPrimitives[orderedMeshData.textureID[i / 3]].AddTriangle(ver1, ver2, ver3);
                 }
 
-               // primitives.AddTriangle(ver1, ver2, ver3);
+                // primitives.AddTriangle(ver1, ver2, ver3);
             }
 
             SharpGLTF.Scenes.SceneBuilder scene = new SharpGLTF.Scenes.SceneBuilder();
@@ -353,6 +303,50 @@ namespace ArxLibertatisFTLConverter
             SharpGLTF.Schema2.ModelRoot model = scene.ToGltf2();
 
             model.SaveGLTF(outputName);
+
+        }
+
+        public static void loadAnimations(string fileName, string animDir)
+        {
+
+            //Animation Handling Hell (AHH)
+            TEA_IO tEA_IO = new TEA_IO();
+            List<string> animationFiles = new List<string>();
+            List<AnimationData> animationDataList = new List<AnimationData>();
+            animationFiles.AddRange(Directory.GetFiles(animDir));
+
+            foreach (string path in animationFiles)
+            {
+                string[] fileNamePieces = fileName.Split('_');
+                //usually the tea files contain the first few characters of the FTL file, likely needs something better
+                if (path.Contains(fileNamePieces[0]))
+                {
+                    Console.WriteLine(path);
+                    AnimationData animationDataItem = new AnimationData();
+                    animationDataItem.name = Path.GetFileName(path); //IOHelper.GetString(tEA_IO.header.identity); // Gibberish
+                    TEA_KEYFRAME tEA_KEYFRAME = new TEA_KEYFRAME(tEA_IO);
+                    using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                    {
+                        Stream s = FTL_IO.EnsureUnpacked(fs);
+
+                        StructReader structReader = new StructReader(s);
+
+                        tEA_IO.ReadFrom(s);
+
+                        tEA_KEYFRAME.ReadFrom(structReader);
+                    }
+
+                    MemoryStream stream = new MemoryStream();
+                    tEA_IO.WriteTo(stream);
+
+                    animationDataItem.tea_header = tEA_IO.header;
+                    animationDataItem.keyframes.Add(tEA_KEYFRAME);
+
+                    animationDataList.Add(animationDataItem);
+
+                }
+
+            }
 
         }
     }
