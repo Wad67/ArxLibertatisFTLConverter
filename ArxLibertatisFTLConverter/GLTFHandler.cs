@@ -12,9 +12,12 @@ using System.Numerics;
 using System.Linq;
 using SixLabors.ImageSharp.Processing;
 
+//TODO:
+//Vertex Groups, Animations (TEA handling)
+//GLTF => FTL
 namespace ArxLibertatisFTLConverter
 {
-    internal class ConvertFTLtoGLTF2
+    internal class GLTFHandler
     {
         public class OrderedMeshData
         {
@@ -41,7 +44,7 @@ namespace ArxLibertatisFTLConverter
             public string textureFile;
         }
 
-        public static void Convert(string file)
+        public static void ConvertToGLTF(string file)
         {
 
             bool debug = true;
@@ -235,7 +238,7 @@ namespace ArxLibertatisFTLConverter
                 gltfPrimitives.Add(sceneMesh.UsePrimitive(gltfMaterials[i], 3));
 
             }
-
+            // I'm aware that the i / 3 is just terrible really, but I think it solves the problems of triplicate vertex versus normal amounts of UV's, textureId's
             for (int i = 0; i < orderedMeshData.verts.Count; i += 3)
             {
                 VertexPositionNormal v1 = new VertexPositionNormal(orderedMeshData.verts[i], orderedMeshData.normals[i]);
