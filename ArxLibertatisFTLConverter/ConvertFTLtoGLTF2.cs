@@ -224,45 +224,38 @@ namespace ArxLibertatisFTLConverter
             }
 
             //Animation Handling Hell (AHH)
-            // AHHHHHHHHHHHHHH
-
             TEA_IO tEA_IO = new TEA_IO();
-
-
-            //Generate list of paths to applicable animation files
-            //for model name* .tea
-            //TEA_IO read file
             List<string> animationFiles = new List<string>();
-
             List<AnimationData> animationDataList = new List<AnimationData>();
-
             animationFiles.AddRange(Directory.GetFiles(animDir));
 
-            //This string formatting here is likely going to need a shitload of work, to find all the requisite tea files anyway
             foreach(string path in animationFiles)
             {
-                //Console.WriteLine(path);
-
                 string[] fileNamePieces = fileName.Split('_');
-
+                //usually the tea files contain the first few characters of the FTL file, likely needs something better
                 if (path.Contains(fileNamePieces[0]))
                 {
                     Console.WriteLine(path);
-
                     AnimationData animationDataItem = new AnimationData();
-                    animationDataItem.name = Path.GetFileName(path); //IOHelper.GetString(tEA_IO.header.identity);
-
+                    animationDataItem.name = Path.GetFileName(path); //IOHelper.GetString(tEA_IO.header.identity); // Gibberish
+                    TEA_KEYFRAME tEA_KEYFRAME = new TEA_KEYFRAME(tEA_IO);
                     using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                     {
                         Stream s = FTL_IO.EnsureUnpacked(fs);
+
+                        StructReader structReader = new StructReader(s);
+
+
                         tEA_IO.ReadFrom(s);
+
+                        tEA_KEYFRAME.ReadFrom(structReader);
                     }
-
-                    TEA_KEYFRAME tea_keyframe = new TEA_KEYFRAME(tEA_IO);
-
                     
+                    MemoryStream stream = new MemoryStream();
+                    tEA_IO.WriteTo(stream);
+
                     animationDataItem.tea_header = tEA_IO.header;
-                    animationDataItem.keyframes.Add(tea_keyframe);
+                    animationDataItem.keyframes.Add(tEA_KEYFRAME); 
 
                     animationDataList.Add(animationDataItem);
 
