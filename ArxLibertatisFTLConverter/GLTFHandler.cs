@@ -32,7 +32,9 @@ namespace ArxLibertatisFTLConverter
 
         public class AnimationData
         {
-            public string name;
+            public string file_name;
+            public string anim_name;
+            public string anim_ident;
             public THEA_HEADER tea_header = new THEA_HEADER();
             public List<TEA_KEYFRAME> keyframes = new List<TEA_KEYFRAME>();
 
@@ -239,13 +241,14 @@ namespace ArxLibertatisFTLConverter
                 }
 
             }
-            LoadAnimations(fileName, animDir);
 
-            OutputGLTF(materials, orderedMeshData, outputName);
+            List<AnimationData> animationDataList = LoadAnimations(fileName, animDir);
+
+            OutputGLTF(materials, orderedMeshData, outputName, vertexGroups);
 
         }
 
-        public static void OutputGLTF(Material[] materials, OrderedMeshData orderedMeshData, string outputName )
+        public static void OutputGLTF(Material[] materials, OrderedMeshData orderedMeshData, string outputName, List<VertexGroup> vertexGroups )
         {
             // GLTF danger zone / overly verbose shitbin from here onwards
 
@@ -302,16 +305,12 @@ namespace ArxLibertatisFTLConverter
                 VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty> ver2 = new VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty>(v2, vt2);
                 VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty> ver3 = new VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty>(v3, vt3);
 
-                if (orderedMeshData.textureID[i / 3] == -1)
-                {
-
-                }
-                else
+                if (orderedMeshData.textureID[i / 3] != -1)
                 {
                     gltfPrimitives[orderedMeshData.textureID[i / 3]].AddTriangle(ver1, ver2, ver3);
                 }
 
-                // primitives.AddTriangle(ver1, ver2, ver3);
+                
             }
 
 
@@ -322,14 +321,25 @@ namespace ArxLibertatisFTLConverter
             //no, I don't care about gymbal lock, my brother in christ you have been played for an absolute fool
             Quaternion fixRotation = new Quaternion(0, 0, 1, 0);
             SharpGLTF.Transforms.AffineTransform defaultTransform = new SharpGLTF.Transforms.AffineTransform(Vector3.One, fixRotation, Vector3.Zero);
+            //setup skins, bones, nodes (lord help me)
 
-            scene.AddRigidMesh(sceneMesh, defaultTransform);
+            for (int i = 0; i != vertexGroups.Count; i++)
+            {
+                SharpGLTF.Scenes.NodeBuilder nodeBuilder = new SharpGLTF.Scenes.NodeBuilder();
+                nodeBuilder.CreateNode(vertexGroups[i].name);
+                scene.AddNode(nodeBuilder);
+
+
+            }
+            
+
+            scene.AddSkinnedMesh(sceneMesh, defaultTransform.Matrix);
 
             SharpGLTF.Schema2.ModelRoot model = scene.ToGltf2();
 
             model.SaveGLTF(outputName);
         }
-        public static void LoadAnimations(string fileName, string animDir)
+        public static List<AnimationData> LoadAnimations(string fileName, string animDir)
         {
 
             //Animation Handling Hell (AHH)
@@ -346,14 +356,16 @@ namespace ArxLibertatisFTLConverter
                 {
                     Console.WriteLine(path);
                     AnimationData animationDataItem = new AnimationData();
-                    animationDataItem.name = Path.GetFileName(path); //IOHelper.GetString(tEA_IO.header.identity); // Gibberish
+                    animationDataItem.file_name = Path.GetFileName(path);
+
 
                     using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                     {
                         tEA_IO.ReadFrom(fs);
                     }
 
-
+                    //animationDataItem.anim_name = IOHelper.GetString(tEA_IO.header.anim_name); //gibberish after string
+                    animationDataItem.anim_ident = IOHelper.GetString(tEA_IO.header.identity);
 
                     animationDataItem.tea_header = tEA_IO.header;
 
@@ -369,6 +381,7 @@ namespace ArxLibertatisFTLConverter
                 }
 
             }
+            return animationDataList;
 
         }
     }
