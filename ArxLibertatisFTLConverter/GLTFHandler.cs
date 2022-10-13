@@ -239,7 +239,7 @@ namespace ArxLibertatisFTLConverter
                 }
 
             }
-            //loadAnimations(string fileName, string animDir);
+            LoadAnimations(fileName, animDir);
 
             OutputGLTF(materials, orderedMeshData, outputName);
 
@@ -314,7 +314,7 @@ namespace ArxLibertatisFTLConverter
                 // primitives.AddTriangle(ver1, ver2, ver3);
             }
 
-            
+
 
             SharpGLTF.Scenes.SceneBuilder scene = new SharpGLTF.Scenes.SceneBuilder();
             //https://www.energid.com/resources/orientation-calculator
@@ -347,23 +347,22 @@ namespace ArxLibertatisFTLConverter
                     Console.WriteLine(path);
                     AnimationData animationDataItem = new AnimationData();
                     animationDataItem.name = Path.GetFileName(path); //IOHelper.GetString(tEA_IO.header.identity); // Gibberish
-                    TEA_KEYFRAME tEA_KEYFRAME = new TEA_KEYFRAME(tEA_IO);
+
                     using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                     {
-                        Stream s = FTL_IO.EnsureUnpacked(fs);
-
-                        StructReader structReader = new StructReader(s);
-
-                        tEA_IO.ReadFrom(s);
-
-                        tEA_KEYFRAME.ReadFrom(structReader);
+                        tEA_IO.ReadFrom(fs);
                     }
 
-                    MemoryStream stream = new MemoryStream();
-                    tEA_IO.WriteTo(stream);
+
 
                     animationDataItem.tea_header = tEA_IO.header;
-                    animationDataItem.keyframes.Add(tEA_KEYFRAME);
+
+                    foreach(TEA_KEYFRAME t_k in tEA_IO.keyframes)
+                    {
+
+                        animationDataItem.keyframes.Add(t_k);
+                    }
+                    animationDataItem.keyframes.AddRange(tEA_IO.keyframes);
 
                     animationDataList.Add(animationDataItem);
 
