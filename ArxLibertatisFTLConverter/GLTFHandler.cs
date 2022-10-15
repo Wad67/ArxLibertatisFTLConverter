@@ -301,6 +301,8 @@ namespace ArxLibertatisFTLConverter
                 VertexTexture1 vt2 = new VertexTexture1(new Vector2(orderedMeshData.U[i / 3].Y, orderedMeshData.V[i / 3].Y));
                 VertexTexture1 vt3 = new VertexTexture1(new Vector2(orderedMeshData.U[i / 3].Z, orderedMeshData.V[i / 3].Z));
 
+                
+
                 VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty> ver1 = new VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty>(v1, vt1);
                 VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty> ver2 = new VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty>(v2, vt2);
                 VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty> ver3 = new VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty>(v3, vt3);
@@ -323,17 +325,51 @@ namespace ArxLibertatisFTLConverter
             SharpGLTF.Transforms.AffineTransform defaultTransform = new SharpGLTF.Transforms.AffineTransform(Vector3.One, fixRotation, Vector3.Zero);
             //setup skins, bones, nodes (lord help me)
 
+            //parent node
+            SharpGLTF.Scenes.NodeBuilder parentNode = new SharpGLTF.Scenes.NodeBuilder();
+            parentNode.CreateNode("Root");
             for (int i = 0; i != vertexGroups.Count; i++)
             {
                 SharpGLTF.Scenes.NodeBuilder nodeBuilder = new SharpGLTF.Scenes.NodeBuilder();
                 nodeBuilder.CreateNode(vertexGroups[i].name);
-                scene.AddNode(nodeBuilder);
+
+                //skins
 
 
-            }
+                // The amount of indices given isn't actually divisible by 9 so god only knows. 
+                try {
+                    // I don't know what the fuck a matrix is and why GLTF demands them
+                    for (int j = 0; j != vertexGroups[i].indices.Count; j += 9)
+                    {
+                        Vector4 vec1 = new Vector4(vertexGroups[i].indices[j + 0], vertexGroups[i].indices[j + 1], vertexGroups[i].indices[j + 2], 1.0f);
+                        Vector4 vec2 = new Vector4(vertexGroups[i].indices[j + 3], vertexGroups[i].indices[j + 4], vertexGroups[i].indices[j + 5], 1.0f);
+                        Vector4 vec3 = new Vector4(vertexGroups[i].indices[j + 6], vertexGroups[i].indices[j + 7], vertexGroups[i].indices[j + 8], 1.0f);
+                        Matrix4x4 skins = new Matrix4x4(
+                            vec1.X, vec1.Y, vec1.Z, -vec1.Z,
+                            vec2.X, vec2.Y, vec2.Z, -vec2.Z,
+                            vec3.X, vec3.Y, vec3.Z, -vec3.Z,
+                            0, 0.1f, 0.1f, 0
+                            );
+                        //No idea what the flying fuck M14 means etc, but GLTF complains about THESE SPECIFIC parameters so here they are
+                        skins.M14 = 0;
+                        skins.M24 = 0;
+                        skins.M34 = 0;
+                        skins.M44 = 1;
+                        nodeBuilder.LocalMatrix = skins;
+                    }
+                } catch (ArgumentOutOfRangeException)
+                {
+                    Console.WriteLine("I really don't care at this time, thank you and fuck off");
+                    }
+
+                parentNode.AddNode(nodeBuilder);
+
+                }
+            scene.AddNode(parentNode);
             
 
-            scene.AddSkinnedMesh(sceneMesh, defaultTransform.Matrix);
+
+            scene.AddSkinnedMesh(sceneMesh, defaultTransform.Matrix,parentNode);
 
             SharpGLTF.Schema2.ModelRoot model = scene.ToGltf2();
 
