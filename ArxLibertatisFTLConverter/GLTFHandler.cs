@@ -251,8 +251,26 @@ namespace ArxLibertatisFTLConverter
         public static void OutputGLTF(Material[] materials, OrderedMeshData orderedMeshData, string outputName, List<VertexGroup> vertexGroups )
         {
             // GLTF danger zone / overly verbose shitbin from here onwards
+            SharpGLTF.Scenes.SceneBuilder scene = new SharpGLTF.Scenes.SceneBuilder();
 
-            MeshBuilder<VertexPositionNormal, VertexTexture1> sceneMesh = new MeshBuilder<VertexPositionNormal, VertexTexture1>(outputName);
+            //parent node
+            SharpGLTF.Scenes.NodeBuilder parentNode = new SharpGLTF.Scenes.NodeBuilder();
+            parentNode.CreateNode("Root");
+            for (int i = 0; i != vertexGroups.Count; i++)
+            {
+                SharpGLTF.Scenes.NodeBuilder nodeBuilder = new SharpGLTF.Scenes.NodeBuilder();
+
+                nodeBuilder.CreateNode(vertexGroups[i].name);
+
+
+                parentNode.AddNode(nodeBuilder);
+
+            }
+            scene.AddNode(parentNode);
+
+
+
+            MeshBuilder<VertexPositionNormal, VertexTexture1, VertexJoints4> sceneMesh = new MeshBuilder<VertexPositionNormal, VertexTexture1, VertexJoints4>(outputName);
 
             //Setup list of GLTF material slots
             List<MaterialBuilder> gltfMaterials = new List<MaterialBuilder>();
@@ -272,7 +290,7 @@ namespace ArxLibertatisFTLConverter
             //For multiple materials, have to define multiple primitive groups. 
             //Each primitive group coincides with each material slot
             //Some textureID's are -1, no idea what this means but I'm just going to subtract one from the count
-            List<PrimitiveBuilder<MaterialBuilder, VertexPositionNormal, VertexTexture1, VertexEmpty>> gltfPrimitives = new List<PrimitiveBuilder<MaterialBuilder, VertexPositionNormal, VertexTexture1, VertexEmpty>>();
+            List<PrimitiveBuilder<MaterialBuilder, VertexPositionNormal, VertexTexture1, VertexJoints4>> gltfPrimitives = new List<PrimitiveBuilder<MaterialBuilder, VertexPositionNormal, VertexTexture1, VertexJoints4>>();
             //This value is set to one, if a TextureID of -1 exists
             int IndexModifier = 0;
 
@@ -301,11 +319,52 @@ namespace ArxLibertatisFTLConverter
                 VertexTexture1 vt2 = new VertexTexture1(new Vector2(orderedMeshData.U[i / 3].Y, orderedMeshData.V[i / 3].Y));
                 VertexTexture1 vt3 = new VertexTexture1(new Vector2(orderedMeshData.U[i / 3].Z, orderedMeshData.V[i / 3].Z));
 
-                
+                //Vertex Joints
+                //have to select from I in vertex group indice.. but how?!?
+                // for each vertex group, if I/3 is in list of indice... Figure out how the fuck..
+                // jesus
 
-                VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty> ver1 = new VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty>(v1, vt1);
-                VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty> ver2 = new VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty>(v2, vt2);
-                VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty> ver3 = new VertexBuilder<VertexPositionNormal, VertexTexture1, VertexEmpty>(v3, vt3);
+                VertexJoints4 vj1 = new VertexJoints4(0);
+                VertexJoints4 vj2 = new VertexJoints4(0);
+                VertexJoints4 vj3 = new VertexJoints4(0);
+
+                foreach (VertexGroup vg in vertexGroups)
+                {
+                    if(vg.indices.Contains(i / 3))
+                    {
+                        Console.WriteLine("Found matching index for group");
+
+                        int JointIndex = vg.indices.IndexOf(i / 3);
+
+                        vj1.Joints = new Vector4(JointIndex, 0, 0, 0);
+                    }
+
+                    if (vg.indices.Contains((i / 3) + 1))
+                    {
+                        Console.WriteLine("Found matching index for group");
+
+                        int JointIndex = vg.indices.IndexOf((i / 3) + 1);
+
+                        vj2.Joints = new Vector4(JointIndex, 0, 0, 0);
+                    }
+
+                    if (vg.indices.Contains((i / 3) + 2))
+                    {
+                        Console.WriteLine("Found matching index for group");
+
+                        int JointIndex = vg.indices.IndexOf((i / 3) + 2);
+
+                        vj3.Joints = new Vector4(JointIndex, 0, 0, 0);
+                    }
+
+                }
+
+
+
+
+                VertexBuilder<VertexPositionNormal, VertexTexture1, VertexJoints4> ver1 = new VertexBuilder<VertexPositionNormal, VertexTexture1, VertexJoints4>(v1, vt1, vj1);
+                VertexBuilder<VertexPositionNormal, VertexTexture1, VertexJoints4> ver2 = new VertexBuilder<VertexPositionNormal, VertexTexture1, VertexJoints4>(v2, vt2, vj2);
+                VertexBuilder<VertexPositionNormal, VertexTexture1, VertexJoints4> ver3 = new VertexBuilder<VertexPositionNormal, VertexTexture1, VertexJoints4>(v3, vt3, vj3);
 
                 if (orderedMeshData.textureID[i / 3] != -1)
                 {
@@ -317,7 +376,7 @@ namespace ArxLibertatisFTLConverter
 
 
 
-            SharpGLTF.Scenes.SceneBuilder scene = new SharpGLTF.Scenes.SceneBuilder();
+            
             //https://www.energid.com/resources/orientation-calculator
             //that site converts from sane numbers to whatever backward crackhead numerical system that quaternions use
             //no, I don't care about gymbal lock, my brother in christ you have been played for an absolute fool
@@ -325,48 +384,9 @@ namespace ArxLibertatisFTLConverter
             SharpGLTF.Transforms.AffineTransform defaultTransform = new SharpGLTF.Transforms.AffineTransform(Vector3.One, fixRotation, Vector3.Zero);
             //setup skins, bones, nodes (lord help me)
 
-            //parent node
-            SharpGLTF.Scenes.NodeBuilder parentNode = new SharpGLTF.Scenes.NodeBuilder();
-            parentNode.CreateNode("Root");
-            for (int i = 0; i != vertexGroups.Count; i++)
-            {
-                SharpGLTF.Scenes.NodeBuilder nodeBuilder = new SharpGLTF.Scenes.NodeBuilder();
-                nodeBuilder.CreateNode(vertexGroups[i].name);
-
-                //skins
 
 
-                // The amount of indices given isn't actually divisible by 9 so god only knows. 
-                try {
-                    // I don't know what the fuck a matrix is and why GLTF demands them
-                    for (int j = 0; j != vertexGroups[i].indices.Count; j += 9)
-                    {
-                        Vector4 vec1 = new Vector4(vertexGroups[i].indices[j + 0], vertexGroups[i].indices[j + 1], vertexGroups[i].indices[j + 2], 1.0f);
-                        Vector4 vec2 = new Vector4(vertexGroups[i].indices[j + 3], vertexGroups[i].indices[j + 4], vertexGroups[i].indices[j + 5], 1.0f);
-                        Vector4 vec3 = new Vector4(vertexGroups[i].indices[j + 6], vertexGroups[i].indices[j + 7], vertexGroups[i].indices[j + 8], 1.0f);
-                        Matrix4x4 skins = new Matrix4x4(
-                            vec1.X, vec1.Y, vec1.Z, -vec1.Z,
-                            vec2.X, vec2.Y, vec2.Z, -vec2.Z,
-                            vec3.X, vec3.Y, vec3.Z, -vec3.Z,
-                            0, 0.1f, 0.1f, 0
-                            );
-                        //No idea what the flying fuck M14 means etc, but GLTF complains about THESE SPECIFIC parameters so here they are
-                        skins.M14 = 0;
-                        skins.M24 = 0;
-                        skins.M34 = 0;
-                        skins.M44 = 1;
-                        nodeBuilder.LocalMatrix = skins;
-                    }
-                } catch (ArgumentOutOfRangeException)
-                {
-                    Console.WriteLine("I really don't care at this time, thank you and fuck off");
-                    }
 
-                parentNode.AddNode(nodeBuilder);
-
-                }
-            scene.AddNode(parentNode);
-            
 
 
             scene.AddSkinnedMesh(sceneMesh, defaultTransform.Matrix,parentNode);
